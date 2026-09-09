@@ -22,6 +22,14 @@ type AppLocation = {
   param: string;
 };
 
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return '';
+  }
+}
+
 function readLocation(): AppLocation {
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   const params = new URLSearchParams(window.location.search);
@@ -31,7 +39,11 @@ function readLocation(): AppLocation {
   if (path === '/categorias') return { view: 'categories', param: '' };
   if (path === '/favoritos') return { view: 'favorites', param: '' };
   if (path === '/admin') return { view: 'admin', param: params.get('tab') || '' };
-  if (path.startsWith('/video/')) return { view: 'video-detail', param: decodeURIComponent(path.slice('/video/'.length)) };
+
+  if (path.startsWith('/video/')) {
+    const id = safeDecode(path.slice('/video/'.length));
+    return id ? { view: 'video-detail', param: id } : { view: 'home', param: '' };
+  }
 
   return { view: 'home', param: '' };
 }
@@ -52,10 +64,11 @@ function writeLocation(view: string, param = '') {
       path = '/favoritos';
       break;
     case 'video-detail':
-      path = `/video/${encodeURIComponent(param)}`;
+      path = param ? `/video/${encodeURIComponent(param)}` : '/';
       break;
     case 'admin':
       path = '/admin';
+      if (param) search = `?tab=${encodeURIComponent(param)}`;
       break;
     default:
       path = '/';
