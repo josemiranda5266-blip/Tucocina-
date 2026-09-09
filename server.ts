@@ -15,19 +15,48 @@ import { createRateLimiter } from './server/middleware/rateLimit';
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number.parseInt(process.env.PORT || '3000', 10);
+const isProduction = process.env.NODE_ENV === 'production';
 
-// Security & Body parsing
+// Only trust forwarded client IP headers when the deployment explicitly says it is behind a trusted proxy.
+app.set('trust proxy', process.env.TRUST_PROXY === 'true');
+
+// Security & body parsing
 app.use(express.json({ limit: '100kb' }));
 
-// Restrictive CORS setup
+// Security headers without an extra runtime dependency.
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  if (isProduction) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+// Restrictive CORS. In production an explicit allowlist is mandatory.
 app.use((req, res, next) => {
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
   const origin = req.headers.origin;
 
-  if (origin && (allowedOrigins.length === 0 || allowedOrigins.includes(origin))) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+  if (isProduction && allowedOrigins.length === 0) {
+    return res.status(500).json({
+      error: { code: 'CORS_NOT_CONFIGURED', message: 'ALLOWED_ORIGINS debe configurarse en producción.' },
+    });
   }
+
+  if (origin) {
+    if (!allowedOrigins.includes(origin)) {
+      return res.status(403).json({ error: { code: 'CORS_ORIGIN_DENIED', message: 'Origen no permitido.' } });
+    }
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
@@ -37,12 +66,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// General Rate Limiting for API routes
+// General API rate limiting. Endpoint-specific limiters add stricter protection where needed.
 const apiLimiter = createRateLimiter(15 * 60 * 1000, 200);
 app.use('/api', apiLimiter);
 
-// API Routes
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -52,12 +80,10 @@ app.use('/api/favorites', favoriteRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Centralized error handler
 app.use(errorHandler);
 
-// Vite middleware for development vs static build serving for production
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
+  if (!isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -65,17 +91,18 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, { maxAge: '1d', index: false }));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[CO-Cocina Server] Listening on http://0.0.0.0:${PORT}`);
+    console.log(`[Tucocina Server] Listening on http://0.0.0.0:${PORT}`);
   });
 }
 
 startServer().catch((err) => {
-  console.error('[CO-Cocina Fatal Error]:', err);
+  console.error('[Tucocina Fatal Error]:', err);
+  process.exitCode = 1;
 });
