@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   User,
   signInWithPopup,
+  signInWithRedirect,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   getIdTokenResult,
@@ -41,8 +42,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
-        // The Firebase Custom Claim is the only client-side source of truth for admin status.
-        // The backend independently verifies the same claim before allowing privileged actions.
         const tokenResult = await getIdTokenResult(currentUser);
         const isAdminClaim = tokenResult.claims.admin === true;
         const resolvedRole: UserRole = isAdminClaim ? 'ADMIN' : 'USER';
@@ -52,15 +51,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
-          // Normal users may create their own profile. Admin elevation is never performed by the client.
+          const now = new Date().toISOString();
           const newProfile: UserProfile = {
             uid: currentUser.uid,
             email: currentUser.email || '',
             displayName: currentUser.displayName || 'Usuario',
             photoURL: currentUser.photoURL || '',
             role: 'USER',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: now,
+            updatedAt: now,
           };
           await setDoc(userRef, newProfile);
           setProfile({ ...newProfile, role: resolvedRole });
@@ -90,7 +89,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      // Firebase recommends redirect-based OAuth on mobile browsers because popup
+      // flows are more likely to be blocked or behave inconsistently there.
+      const isMobileBrowser = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+      if (isMobileBrowser) {
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        await signInWithPopup(auth, googleProvider);
+      }
     } catch (error) {
       console.error('Error al iniciar sesión con Google:', error);
       throw error;
@@ -108,17 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdmin = role === 'ADMIN';
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        role,
-        isAdmin,
-        loading,
-        signInWithGoogle,
-        signOut,
-      }}
-    >
+    <AuthContext.Provider value={{ user, profile, role, isAdmin, loading, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
