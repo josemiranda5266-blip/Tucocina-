@@ -15,8 +15,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
   const [categories, setCategories] = useState<Category[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filter state
   let parsedCategory = '';
   let parsedSearch = initialQuery;
 
@@ -31,56 +31,70 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
   const [selectedSort, setSelectedSort] = useState<'recent' | 'views'>('recent');
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [pageCursors, setPageCursors] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    api.getCategories().then(setCategories).catch(() => {});
+    api.getCategories().then(setCategories).catch(() => {
+      setCategories([]);
+    });
   }, []);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setError(null);
 
     api.getVideos({
-      page: currentPage,
+      cursor: pageCursors[currentPage],
       limit: 12,
       searchQuery,
-      categoryId: selectedCategory,
+      categoryId: selectedCategory || undefined,
       platform: selectedPlatform || undefined,
       sortBy: selectedSort,
     })
       .then((res) => {
-        if (active) {
-          setVideos(res.items);
-          setHasMore(res.hasMore);
+        if (!active) return;
+        setVideos(res.items);
+        setHasMore(res.hasMore);
+        if (res.nextCursor) {
+          setPageCursors((previous) => ({ ...previous, [currentPage + 1]: res.nextCursor! }));
         }
       })
       .catch((err) => {
-        console.error('Error al realizar búsqueda:', err);
+        if (active) {
+          setVideos([]);
+          setHasMore(false);
+          setError(err instanceof Error ? err.message : 'No se pudo cargar el catálogo.');
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
       });
 
     return () => { active = false; };
-  }, [searchQuery, selectedCategory, selectedPlatform, selectedSort, currentPage]);
+  }, [searchQuery, selectedCategory, selectedPlatform, selectedSort, currentPage, pageCursors]);
+
+  const resetPagination = () => {
+    setCurrentPage(1);
+    setPageCursors({});
+  };
 
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedCategory('');
     setSelectedPlatform('');
     setSelectedSort('recent');
-    setCurrentPage(1);
+    resetPagination();
   };
 
   return (
     <div className="space-y-6 pb-12">
-      
       <div className="space-y-2">
         <h1 className="text-3xl font-extrabold font-serif text-stone-900">
           Buscador de Videos de Cocina
         </h1>
         <p className="text-stone-600 text-sm">
-          Explorá miles de recetas filtradas por ingredientes, plataforma o tipo de plato.
+          Explorá videos de cocina filtrados por ingredientes, plataforma o tipo de plato.
         </p>
       </div>
 
@@ -88,7 +102,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
         initialValue={searchQuery}
         onSearch={(q) => {
           setSearchQuery(q);
-          setCurrentPage(1);
+          resetPagination();
         }}
       />
 
@@ -97,11 +111,17 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
         selectedCategory={selectedCategory}
         selectedPlatform={selectedPlatform}
         selectedSort={selectedSort}
-        onCategoryChange={(cat) => { setSelectedCategory(cat); setCurrentPage(1); }}
-        onPlatformChange={(plat) => { setSelectedPlatform(plat); setCurrentPage(1); }}
-        onSortChange={(sort) => { setSelectedSort(sort); setCurrentPage(1); }}
+        onCategoryChange={(cat) => { setSelectedCategory(cat); resetPagination(); }}
+        onPlatformChange={(plat) => { setSelectedPlatform(plat); resetPagination(); }}
+        onSortChange={(sort) => { setSelectedSort(sort); resetPagination(); }}
         onReset={handleResetFilters}
       />
+
+      {error && (
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          {error}
+        </div>
+      )}
 
       <VideoGrid
         videos={videos}
@@ -114,7 +134,6 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
         hasMore={hasMore}
         onPageChange={setCurrentPage}
       />
-
     </div>
   );
 };
