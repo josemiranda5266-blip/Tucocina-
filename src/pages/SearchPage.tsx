@@ -34,9 +34,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
   const [pageCursors, setPageCursors] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    api.getCategories().then(setCategories).catch(() => {
-      setCategories([]);
-    });
+    api.getCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
 
   useEffect(() => {
@@ -57,15 +55,17 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
         setVideos(res.items);
         setHasMore(res.hasMore);
         if (res.nextCursor) {
-          setPageCursors((previous) => ({ ...previous, [currentPage + 1]: res.nextCursor! }));
+          setPageCursors((previous) => {
+            if (previous[currentPage + 1] === res.nextCursor) return previous;
+            return { ...previous, [currentPage + 1]: res.nextCursor! };
+          });
         }
       })
       .catch((err) => {
-        if (active) {
-          setVideos([]);
-          setHasMore(false);
-          setError(err instanceof Error ? err.message : 'No se pudo cargar el catálogo.');
-        }
+        if (!active) return;
+        setVideos([]);
+        setHasMore(false);
+        setError(err instanceof Error ? err.message : 'No se pudo cargar el catálogo.');
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -90,21 +90,11 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
   return (
     <div className="space-y-6 pb-12">
       <div className="space-y-2">
-        <h1 className="text-3xl font-extrabold font-serif text-stone-900">
-          Buscador de Videos de Cocina
-        </h1>
-        <p className="text-stone-600 text-sm">
-          Explorá videos de cocina filtrados por ingredientes, plataforma o tipo de plato.
-        </p>
+        <h1 className="text-3xl font-extrabold font-serif text-stone-900">Buscador de Videos de Cocina</h1>
+        <p className="text-stone-600 text-sm">Explorá videos de cocina filtrados por ingredientes, plataforma o tipo de plato.</p>
       </div>
 
-      <SearchBar
-        initialValue={searchQuery}
-        onSearch={(q) => {
-          setSearchQuery(q);
-          resetPagination();
-        }}
-      />
+      <SearchBar initialValue={searchQuery} onSearch={(q) => { setSearchQuery(q); resetPagination(); }} />
 
       <FilterBar
         categories={categories}
@@ -118,22 +108,11 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
       />
 
       {error && (
-        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-          {error}
-        </div>
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>
       )}
 
-      <VideoGrid
-        videos={videos}
-        loading={loading}
-        onVideoSelect={onVideoSelect}
-      />
-
-      <Pagination
-        currentPage={currentPage}
-        hasMore={hasMore}
-        onPageChange={setCurrentPage}
-      />
+      <VideoGrid videos={videos} loading={loading} onVideoSelect={onVideoSelect} />
+      <Pagination currentPage={currentPage} hasMore={hasMore} onPageChange={setCurrentPage} />
     </div>
   );
 };
