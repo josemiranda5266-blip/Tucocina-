@@ -11,7 +11,7 @@ export const ALLOWED_VIDEO_DOMAINS = [
   'www.tiktok.com',
   'm.tiktok.com',
   'vm.tiktok.com',
-];
+] as const;
 
 const PRIVATE_IP_PATTERNS = [
   /^127\./,
@@ -20,11 +20,19 @@ const PRIVATE_IP_PATTERNS = [
   /^192\.168\./,
   /^169\.254\./,
   /^0\./,
+  /^100\.64\./,
+  /^198\.18\./,
+  /^198\.19\./,
   /^::1$/,
   /^fc00:/,
+  /^fd[0-9a-f]{2}:/i,
   /^fe80:/,
   /^localhost$/i,
 ];
+
+function isAllowedHostname(hostname: string): boolean {
+  return ALLOWED_VIDEO_DOMAINS.some((allowed) => hostname === allowed);
+}
 
 export function validateExternalUrl(urlString: string): { valid: boolean; reason?: string; url?: URL } {
   if (!urlString || typeof urlString !== 'string') {
@@ -38,26 +46,19 @@ export function validateExternalUrl(urlString: string): { valid: boolean; reason
     return { valid: false, reason: 'Formato de URL inválido' };
   }
 
-  // Scheme validation
-  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
-    return { valid: false, reason: 'Solo se permiten protocolos HTTP y HTTPS' };
+  if (parsedUrl.protocol !== 'https:') {
+    return { valid: false, reason: 'Solo se permiten URLs HTTPS de plataformas soportadas' };
   }
 
   const hostname = parsedUrl.hostname.toLowerCase();
 
-  // Check private IP / localhost
   for (const pattern of PRIVATE_IP_PATTERNS) {
     if (pattern.test(hostname)) {
       return { valid: false, reason: 'Acceso a direcciones IP privadas o locales no permitido (SSRF Guard)' };
     }
   }
 
-  // Domain allowlist check
-  const isAllowedDomain = ALLOWED_VIDEO_DOMAINS.some(
-    (allowed) => hostname === allowed || hostname.endsWith('.' + allowed)
-  );
-
-  if (!isAllowedDomain) {
+  if (!isAllowedHostname(hostname)) {
     return {
       valid: false,
       reason: `El dominio '${hostname}' no está en la lista de plataformas permitidas (YouTube, Instagram, TikTok)`,
