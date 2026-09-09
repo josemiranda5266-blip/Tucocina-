@@ -26,5 +26,5 @@ test('frontend URL guard validates embed route by platform', () => {
   assert.ok(getSafeEmbedUrl('https://www.youtube-nocookie.com/embed/abcdefghijk', 'YOUTUBE'));
   assert.equal(getSafeEmbedUrl('https://www.youtube-nocookie.com/watch?v=abcdefghijk', 'YOUTUBE'), null);
   assert.ok(getSafeEmbedUrl('https://www.instagram.com/reel/ABC123/embed', 'INSTAGRAM'));
-  assert.equal(getSafeEmbedUrl('https://www.tiktok.com/embed/v2/123456789', 'TIKTOK'), null);
+  assert.equal(getSafeEmbedUrl('https://www.tiktok.com/video/123456789', 'TIKTOK'), null);
 });
