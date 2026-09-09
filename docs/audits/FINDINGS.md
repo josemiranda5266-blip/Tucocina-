@@ -17,6 +17,8 @@
 | TUC-API-005 | 🟠 Media | Frontend seguía enviando paginación por `page` aunque backend usa cursores | ✅ Corregido | Tipos, servicio API, búsqueda y catálogo admin migrados a `cursor` |
 | TUC-API-006 | 🟠 Media | Contratos frontend/backend desalineados en favoritos y reportes paginados | ✅ Corregido | Respuestas `items/hasMore/nextCursor` consumidas correctamente |
 | TUC-API-007 | 🟠 Media | Estado `DISMISSED` del backend no coincidía con `REJECTED` del dominio/frontend | ✅ Corregido | Contrato unificado en `REJECTED` |
+| TUC-SEC-006 | 🟠 Media | Frontend confiaba directamente en `embedUrl`/`originalUrl` persistidos para iframe y navegación externa | ✅ Corregido | Allowlist por plataforma + HTTPS + rutas de embed esperadas |
+| TUC-AUTH-001 | 🟠 Media | OAuth Google usaba popup también en navegadores móviles | ✅ Corregido | Redirect en dispositivos/navegadores con pointer coarse; popup en desktop |
 
 ## Convención
 
