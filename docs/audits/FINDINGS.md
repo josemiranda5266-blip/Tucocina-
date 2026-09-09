@@ -23,6 +23,8 @@
 | TUC-BUILD-001 | 🟠 Media | Persistía infraestructura específica del prototipo AI Studio sin función para el MVP | ✅ Corregido | Eliminado plugin de medios AI Studio y placeholder `public/assets/aistudio` |
 | TUC-A11Y-001 | 🟢 Baja | Header tenía navegación/iconos sin semántica accesible suficiente | ✅ Corregido | Botón semántico para marca, `nav` etiquetado, `aria-label`, `aria-expanded` y `aria-hidden` |
 | TUC-NAV-001 | 🟠 Media | Navegación era estado local: URLs no representaban pantallas y refresh/back perdían contexto | ✅ Corregido | Rutas `/buscar`, `/categorias`, `/favoritos`, `/video/:id`, `/admin`; History API + `popstate` |
+| TUC-DATA-003 | 🟠 Media | Consultas compuestas de Firestore no tenían configuración de índices versionada | ✅ Corregido | Añadidos `firestore.indexes.json` y `firebase.json` con índices de catálogo/reportes |
+| TUC-CI-001 | 🟠 Media | No había pipeline automatizado de typecheck/build para detectar regresiones antes de release | ✅ Corregido | GitHub Actions con Bun, typecheck y build en push/PR |
 
 ## Convención
 
