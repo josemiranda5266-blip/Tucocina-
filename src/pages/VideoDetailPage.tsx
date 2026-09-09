@@ -5,6 +5,7 @@ import { FavoriteButton } from '../components/FavoriteButton';
 import { ReportModal } from '../components/ReportModal';
 import { ArrowLeft, ExternalLink, Flag, Eye, Clock, User, Tag } from 'lucide-react';
 import { api } from '../services/api';
+import { getSafeOriginalUrl } from '../utils/safeVideoUrls';
 
 interface VideoDetailPageProps {
   videoId: string;
@@ -20,13 +21,14 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setError(null);
 
     api.getVideoById(videoId)
       .then((data) => {
         if (active) setVideo(data);
       })
       .catch((err) => {
-        if (active) setError(err.message || 'No se pudo cargar el video');
+        if (active) setError(err instanceof Error ? err.message : 'No se pudo cargar el video');
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -60,10 +62,10 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
     );
   }
 
+  const safeOriginalUrl = getSafeOriginalUrl(video.originalUrl);
+
   return (
     <div id="video-detail-page" className="max-w-4xl mx-auto space-y-6 pb-12">
-      
-      {/* Back button */}
       <button
         id="video-back-btn"
         onClick={onBack}
@@ -73,12 +75,9 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
         <span>Volver al catálogo</span>
       </button>
 
-      {/* Embedded Player */}
       <VideoPlayer video={video} />
 
-      {/* Video Info Header */}
       <div className="bg-white p-6 sm:p-8 rounded-2xl border border-stone-200/80 shadow-sm space-y-6">
-        
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="space-y-2">
             <span className="inline-block bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">
@@ -91,19 +90,20 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
 
           <div className="flex items-center space-x-2 shrink-0">
             <FavoriteButton videoId={video.id} size="lg" />
-            <a
-              href={video.originalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Abrir video original"
-              className="p-2.5 bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 rounded-full transition-colors flex items-center justify-center"
-            >
-              <ExternalLink className="w-5 h-5" />
-            </a>
+            {safeOriginalUrl && (
+              <a
+                href={safeOriginalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Abrir video original"
+                className="p-2.5 bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 rounded-full transition-colors flex items-center justify-center"
+              >
+                <ExternalLink className="w-5 h-5" />
+              </a>
+            )}
           </div>
         </div>
 
-        {/* Creator & Meta info */}
         <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-stone-600 pt-4 border-t border-stone-100">
           <div className="flex items-center space-x-1.5 text-stone-900 font-bold bg-stone-100 px-3 py-1.5 rounded-lg">
             <User className="w-4 h-4 text-amber-700" />
@@ -128,7 +128,6 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
           </div>
         </div>
 
-        {/* Video Description */}
         {video.description && (
           <div className="space-y-2 pt-4 border-t border-stone-100">
             <h3 className="font-bold text-stone-900 text-sm">Descripción del video</h3>
@@ -138,38 +137,39 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
           </div>
         )}
 
-        {/* Tags */}
         {video.tags && video.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-2">
-            {video.tags.map((tag, i) => (
-              <span key={i} className="text-xs bg-stone-100 text-stone-600 px-2.5 py-1 rounded-md">
+            {video.tags.map((tag) => (
+              <span key={tag} className="text-xs bg-stone-100 text-stone-600 px-2.5 py-1 rounded-md">
                 #{tag}
               </span>
             ))}
           </div>
         )}
 
-        {/* Actions Footer */}
-        <div className="pt-6 border-t border-stone-100 flex items-center justify-between">
-          <a
-            href={video.originalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 bg-stone-900 hover:bg-black text-white font-medium px-5 py-2.5 rounded-xl text-sm shadow transition-all"
-          >
-            <span>Ver receta original en {video.platform}</span>
-            <ExternalLink className="w-4 h-4" />
-          </a>
+        <div className="pt-6 border-t border-stone-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {safeOriginalUrl ? (
+            <a
+              href={safeOriginalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center space-x-2 bg-stone-900 hover:bg-black text-white font-medium px-5 py-2.5 rounded-xl text-sm shadow transition-all"
+            >
+              <span>Ver receta original en {video.platform}</span>
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          ) : (
+            <span className="text-xs text-stone-500">Enlace original no disponible.</span>
+          )}
 
           <button
             onClick={() => setReportModalOpen(true)}
-            className="inline-flex items-center space-x-1.5 text-stone-500 hover:text-rose-600 text-xs font-semibold"
+            className="inline-flex items-center justify-center space-x-1.5 text-stone-500 hover:text-rose-600 text-xs font-semibold"
           >
             <Flag className="w-4 h-4" />
             <span>Reportar problema</span>
           </button>
         </div>
-
       </div>
 
       <ReportModal
@@ -177,7 +177,6 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
         isOpen={reportModalOpen}
         onClose={() => setReportModalOpen(false)}
       />
-
     </div>
   );
 };
