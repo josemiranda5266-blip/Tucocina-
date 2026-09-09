@@ -1,0 +1,109 @@
+{
+  "entities": {
+    "Video": {
+      "title": "Video",
+      "description": "Video de cocina indexado en CO-Cocina",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "originalUrl": { "type": "string", "maxLength": 1000 },
+        "embedUrl": { "type": "string", "maxLength": 1000 },
+        "platform": { "type": "string", "enum": ["YOUTUBE", "INSTAGRAM", "TIKTOK", "OTHER"] },
+        "thumbnailUrl": { "type": "string", "maxLength": 1000 },
+        "creatorName": { "type": "string", "maxLength": 100 },
+        "creatorUrl": { "type": "string", "maxLength": 1000 },
+        "durationSeconds": { "type": "number" },
+        "publishedAt": { "type": "string" },
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "tags": { "type": "array" },
+        "status": { "type": "string", "enum": ["DRAFT", "PENDING_REVIEW", "PUBLISHED", "HIDDEN", "REJECTED"] },
+        "views": { "type": "number" },
+        "favoritesCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "title", "originalUrl", "embedUrl", "platform", "categoryId", "status"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Categoría gastronómica",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "slug": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 500 },
+        "icon": { "type": "string", "maxLength": 50 },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "name", "slug"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Perfil de usuario registrado",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 200 },
+        "displayName": { "type": "string", "maxLength": 150 },
+        "photoURL": { "type": "string", "maxLength": 1000 },
+        "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "Video guardado como favorito por el usuario",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "videoId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "videoId"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Reporte de problema enviado sobre un video",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "videoId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 200 },
+        "reason": { "type": "string", "enum": ["BROKEN_LINK", "INCORRECT_CONTENT", "OFFENSIVE_CONTENT", "DUPLICATE", "OTHER"] },
+        "description": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["OPEN", "REVIEWED", "RESOLVED", "REJECTED"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "videoId", "reason", "description", "status"]
+    }
+  },
+  "firestore": {
+    "/videos/{videoId}": {
+      "schema": { "$ref": "#/entities/Video" },
+      "description": "Colección de videos de cocina"
+    },
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Colección de categorías gastronómicas"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Perfiles de usuarios"
+    },
+    "/users/{userId}/favorites/{videoId}": {
+      "schema": { "$ref": "#/entities/Favorite" },
+      "description": "Subcolección de favoritos por usuario"
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/Report" },
+      "description": "Reportes de videos enviados por usuarios"
+    }
+  }
+}
