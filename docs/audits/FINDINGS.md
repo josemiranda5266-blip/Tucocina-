@@ -19,6 +19,9 @@
 | TUC-API-007 | 🟠 Media | Estado `DISMISSED` del backend no coincidía con `REJECTED` del dominio/frontend | ✅ Corregido | Contrato unificado en `REJECTED` |
 | TUC-SEC-006 | 🟠 Media | Frontend confiaba directamente en `embedUrl`/`originalUrl` persistidos para iframe y navegación externa | ✅ Corregido | Allowlist por plataforma + HTTPS + rutas de embed esperadas |
 | TUC-AUTH-001 | 🟠 Media | OAuth Google usaba popup también en navegadores móviles | ✅ Corregido | Redirect en dispositivos/navegadores con pointer coarse; popup en desktop |
+| TUC-FE-001 | 🟢 Baja | Metadatos HTML conservaban branding histórico `CO-Cocina` en el nuevo producto | ✅ Corregido | `<title>`, Open Graph, Twitter y descripción actualizados a Tucocina |
+| TUC-BUILD-001 | 🟠 Media | Persistía infraestructura específica del prototipo AI Studio sin función para el MVP | ✅ Corregido | Eliminado plugin de medios AI Studio y placeholder `public/assets/aistudio` |
+| TUC-A11Y-001 | 🟢 Baja | Header tenía navegación/iconos sin semántica accesible suficiente | ✅ Corregido | Botón semántico para marca, `nav` etiquetado, `aria-label`, `aria-expanded` y `aria-hidden` |
 
 ## Convención
 
