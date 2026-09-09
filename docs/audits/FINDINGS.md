@@ -22,6 +22,7 @@
 | TUC-FE-001 | 🟢 Baja | Metadatos HTML conservaban branding histórico `CO-Cocina` en el nuevo producto | ✅ Corregido | `<title>`, Open Graph, Twitter y descripción actualizados a Tucocina |
 | TUC-BUILD-001 | 🟠 Media | Persistía infraestructura específica del prototipo AI Studio sin función para el MVP | ✅ Corregido | Eliminado plugin de medios AI Studio y placeholder `public/assets/aistudio` |
 | TUC-A11Y-001 | 🟢 Baja | Header tenía navegación/iconos sin semántica accesible suficiente | ✅ Corregido | Botón semántico para marca, `nav` etiquetado, `aria-label`, `aria-expanded` y `aria-hidden` |
+| TUC-NAV-001 | 🟠 Media | Navegación era estado local: URLs no representaban pantallas y refresh/back perdían contexto | ✅ Corregido | Rutas `/buscar`, `/categorias`, `/favoritos`, `/video/:id`, `/admin`; History API + `popstate` |
 
 ## Convención
 
