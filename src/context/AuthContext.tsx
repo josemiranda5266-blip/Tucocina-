@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import {
+  User,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  getIdTokenResult,
+} from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../config/firebase';
 import { UserProfile, UserRole } from '../types';
@@ -19,54 +25,64 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [role, setRole] = useState<UserRole>('USER');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        try {
-          const userRef = doc(db, 'users', currentUser.uid);
-          const userSnap = await getDoc(userRef);
+      setLoading(true);
 
-          const isBootstrapAdmin = currentUser.email === 'cristianbravo5266@gmail.com';
-          const defaultRole: UserRole = isBootstrapAdmin ? 'ADMIN' : 'USER';
+      if (!currentUser) {
+        setProfile(null);
+        setRole('USER');
+        setLoading(false);
+        return;
+      }
 
-          if (!userSnap.exists()) {
-            const newProfile: UserProfile = {
-              uid: currentUser.uid,
-              email: currentUser.email || '',
-              displayName: currentUser.displayName || 'Usuario',
-              photoURL: currentUser.photoURL || '',
-              role: defaultRole,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            await setDoc(userRef, newProfile);
-            setProfile(newProfile);
-          } else {
-            const existing = userSnap.data() as UserProfile;
-            if (isBootstrapAdmin && existing.role !== 'ADMIN') {
-              existing.role = 'ADMIN';
-              await setDoc(userRef, existing, { merge: true });
-            }
-            setProfile(existing);
-          }
-        } catch {
-          setProfile({
+      try {
+        // The Firebase Custom Claim is the only client-side source of truth for admin status.
+        // The backend independently verifies the same claim before allowing privileged actions.
+        const tokenResult = await getIdTokenResult(currentUser);
+        const isAdminClaim = tokenResult.claims.admin === true;
+        const resolvedRole: UserRole = isAdminClaim ? 'ADMIN' : 'USER';
+        setRole(resolvedRole);
+
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+          // Normal users may create their own profile. Admin elevation is never performed by the client.
+          const newProfile: UserProfile = {
             uid: currentUser.uid,
             email: currentUser.email || '',
             displayName: currentUser.displayName || 'Usuario',
             photoURL: currentUser.photoURL || '',
-            role: currentUser.email === 'cristianbravo5266@gmail.com' ? 'ADMIN' : 'USER',
+            role: 'USER',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-          });
+          };
+          await setDoc(userRef, newProfile);
+          setProfile({ ...newProfile, role: resolvedRole });
+        } else {
+          const existing = userSnap.data() as UserProfile;
+          setProfile({ ...existing, role: resolvedRole });
         }
-      } else {
-        setProfile(null);
+      } catch (error) {
+        console.error('Error al cargar el perfil de usuario:', error);
+        setRole('USER');
+        setProfile({
+          uid: currentUser.uid,
+          email: currentUser.email || '',
+          displayName: currentUser.displayName || 'Usuario',
+          photoURL: currentUser.photoURL || '',
+          role: 'USER',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -89,7 +105,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const role: UserRole = profile?.role || (user?.email === 'cristianbravo5266@gmail.com' ? 'ADMIN' : 'USER');
   const isAdmin = role === 'ADMIN';
 
   return (
