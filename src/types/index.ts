@@ -77,14 +77,14 @@ export interface VideoFilterOptions {
   searchQuery?: string;
   status?: VideoStatus;
   sortBy?: 'recent' | 'views' | 'title';
-  page?: number;
+  cursor?: string;
   limit?: number;
 }
 
 export interface PaginatedResult<T> {
   items: T[];
-  total: number;
-  page: number;
+  total?: number;
   limit: number;
   hasMore: boolean;
+  nextCursor: string | null;
 }
