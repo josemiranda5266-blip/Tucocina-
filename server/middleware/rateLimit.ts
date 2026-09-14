@@ -23,6 +23,9 @@ export function createRateLimiter(windowMs = 15 * 60 * 1000, maxRequests = 100) 
   ensureCleanupTimer();
 
   return (req: Request, res: Response, next: NextFunction) => {
+    if (process.env.NODE_ENV === 'test' || process.env.DISABLE_RATE_LIMIT === 'true') {
+      return next();
+    }
     // req.ip respects Express's trusted-proxy configuration and avoids trusting a spoofed header directly.
     const key = req.ip || 'unknown';
     const now = Date.now();

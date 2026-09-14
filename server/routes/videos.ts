@@ -29,6 +29,8 @@ router.get('/', async (req: Request, res: Response) => {
     const orderField = sortBy === 'views' ? 'views' : 'createdAt';
     query = query.orderBy(orderField, 'desc').orderBy('__name__', 'desc');
 
+    const baseQuery = query;
+
     if (cursor) {
       const cursorDoc = await db.collection('videos').doc(cursor).get();
       if (!cursorDoc.exists || cursorDoc.data()?.status !== 'PUBLISHED') {
@@ -65,8 +67,8 @@ router.get('/', async (req: Request, res: Response) => {
     const items = docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const nextCursor = hasMore ? docs[docs.length - 1]?.id || null : null;
 
-    // Count is an aggregation over indexes rather than downloading the collection.
-    const countSnapshot = await query.count().get();
+    // Count is an aggregation over indexes on the base filtered query.
+    const countSnapshot = await baseQuery.count().get();
 
     res.json({
       items,

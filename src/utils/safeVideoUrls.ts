@@ -17,6 +17,7 @@ const EMBED_HOSTS: Record<VideoPlatform, Set<string>> = {
   YOUTUBE: new Set(['www.youtube-nocookie.com']),
   INSTAGRAM: new Set(['www.instagram.com']),
   TIKTOK: new Set(['www.tiktok.com']),
+  OTHER: new Set([]),
 };
 
 export function getSafeOriginalUrl(url: string): string | null {

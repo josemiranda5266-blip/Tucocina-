@@ -23,8 +23,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
       try {
         const [cats, recentRes, popularRes] = await Promise.all([
           api.getCategories(),
-          api.getVideos({ page: 1, limit: 8, sortBy: 'recent' }),
-          api.getVideos({ page: 1, limit: 8, sortBy: 'views' }),
+          api.getVideos({ limit: 8, sortBy: 'recent' }),
+          api.getVideos({ limit: 8, sortBy: 'views' }),
         ]);
 
         if (active) {

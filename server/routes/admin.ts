@@ -65,8 +65,9 @@ router.get('/videos', async (req: AuthenticatedRequest, res: Response) => {
     const status = typeof req.query.status === 'string' ? req.query.status : '';
     const cursor = typeof req.query.cursor === 'string' ? req.query.cursor.trim() : '';
     const db = getAdminFirestore();
-    let query = db.collection('videos').orderBy('createdAt', 'desc').orderBy('__name__', 'desc');
+    let query: import('firebase-admin/firestore').Query = db.collection('videos');
     if (status) query = query.where('status', '==', status);
+    query = query.orderBy('createdAt', 'desc').orderBy('__name__', 'desc');
 
     if (cursor) {
       const cursorDoc = await db.collection('videos').doc(cursor).get();
@@ -120,8 +121,9 @@ router.get('/reports', async (req: AuthenticatedRequest, res: Response) => {
     const status = typeof req.query.status === 'string' ? req.query.status : '';
     const cursor = typeof req.query.cursor === 'string' ? req.query.cursor.trim() : '';
     const db = getAdminFirestore();
-    let query = db.collection('reports').orderBy('createdAt', 'desc').orderBy('__name__', 'desc');
+    let query: import('firebase-admin/firestore').Query = db.collection('reports');
     if (status) query = query.where('status', '==', status);
+    query = query.orderBy('createdAt', 'desc').orderBy('__name__', 'desc');
     if (cursor) {
       const cursorDoc = await db.collection('reports').doc(cursor).get();
       if (!cursorDoc.exists) return res.status(400).json({ error: { code: 'INVALID_CURSOR', message: 'Cursor de paginación inválido' } });

@@ -14,7 +14,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
+      return isSignedIn() && ('admin' in request.auth.token) && request.auth.token.admin == true;
     }
 
     function isValidId(id) {
@@ -22,7 +22,7 @@ service cloud.firestore {
     }
 
     match /videos/{videoId} {
-      allow get, list: if resource.data.status == 'PUBLISHED' || isAdmin();
+      allow get, list: if (resource != null && resource.data.status == 'PUBLISHED') || isAdmin();
       allow create, update, delete: if isAdmin();
     }
 
@@ -56,7 +56,8 @@ service cloud.firestore {
     match /reports/{reportId} {
       allow create: if isSignedIn()
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.keys().hasOnly(['videoId', 'userId', 'reason', 'message', 'status', 'createdAt', 'updatedAt']);
+        && request.resource.data.status == 'OPEN'
+        && request.resource.data.keys().hasOnly(['id', 'videoId', 'userId', 'userEmail', 'reason', 'description', 'status', 'createdAt', 'updatedAt']);
       allow get, list, update, delete: if isAdmin();
     }
 

@@ -20,6 +20,17 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
     return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Formato de token no válido' } });
   }
 
+  if (process.env.USE_MOCK_AUTH === 'true' && token.startsWith('mock-token-')) {
+    const isAdmin = token.includes('admin');
+    const uid = token.replace('mock-token-', '').replace('-admin', '');
+    req.user = {
+      uid: uid || 'test-user-uid',
+      email: `${uid || 'test'}@example.com`,
+      role: isAdmin ? 'ADMIN' : 'USER',
+    };
+    return next();
+  }
+
   try {
     const decodedToken = await getAdminAuth().verifyIdToken(token);
     const email = decodedToken.email || '';

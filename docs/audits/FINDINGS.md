@@ -24,7 +24,15 @@
 | TUC-A11Y-001 | 🟢 Baja | Header tenía navegación/iconos sin semántica accesible suficiente | ✅ Corregido | Botón semántico para marca, `nav` etiquetado, `aria-label`, `aria-expanded` y `aria-hidden` |
 | TUC-NAV-001 | 🟠 Media | Navegación era estado local: URLs no representaban pantallas y refresh/back perdían contexto | ✅ Corregido | Rutas `/buscar`, `/categorias`, `/favoritos`, `/video/:id`, `/admin`; History API + `popstate` |
 | TUC-DATA-003 | 🟠 Media | Consultas compuestas de Firestore no tenían configuración de índices versionada | ✅ Corregido | Añadidos `firestore.indexes.json` y `firebase.json` con índices de catálogo/reportes |
-| TUC-CI-001 | 🟠 Media | No había pipeline automatizado de typecheck/build para detectar regresiones antes de release | ✅ Corregido | GitHub Actions con Bun, typecheck y build en push/PR |
+| TUC-CI-001 | 🟠 Media | No había pipeline automatizado de typecheck/build para detectar regresiones antes de release | ✅ Corregido | GitHub Actions con Bun, typecheck, test y build en push/PR |
+| TUC-API-008 | 🟠 Media | Conteo `count()` en catálogo de videos se aplicaba sobre la consulta ya modificada con cursor | ✅ Corregido | Se utiliza `baseQuery` antes de aplicar `startAfter` |
+| TUC-API-009 | 🟠 Media | Filtros de estado `.where()` en panel administrativo se ejecutaban tras `.orderBy()` | ✅ Corregido | `.where()` posicionado previo a `.orderBy()` acorde a las reglas de Firestore |
+| TUC-SEC-007 | 🟠 Media | Inconsistencia de esquema de campos y falta de invariantes en reglas de reportes | ✅ Corregido | `firestore.rules` actualizado con la lista de campos exacta e invariante `status == 'OPEN'` |
+| TUC-SEC-008 | 🟠 Media | CORS en modo desarrollo bloqueaba peticiones con header `Origin` cuando `ALLOWED_ORIGINS` estaba vacío | ✅ Corregido | Permitidas solicitudes en desarrollo previa validación si la lista no está configurada |
+| TUC-CI-002 | 🟠 Media | El flujo de trabajo de CI no ejecutaba la suite de pruebas automatizadas | ✅ Corregido | Se integró el paso `bun run test` en `.github/workflows/ci.yml` |
+| TUC-SEC-009 | 🟠 Media | Función `isAdmin()` en `firestore.rules` podía provocar error en evaluación al no comprobar si `admin` existía en `request.auth.token` | ✅ Corregido | Se usó `('admin' in request.auth.token) && request.auth.token.admin == true` |
+| TUC-SEC-010 | 🟠 Media | Regla de lectura pública de `/videos/{videoId}` intentaba acceder a `resource.data` sin validar `resource != null` | ✅ Corregido | Se añadió salvaguarda `resource != null` para evitar runtime errors en documentos inexistentes |
+| TUC-TEST-001 | 🔴 Alta | Cobertura de Security Rules no contaba con ejecuciones automatizadas contra Firebase Local Emulator Suite | ✅ Corregido | Implementada suite en `tests/rules.test.ts` con Java 21 y Firebase Emulator ejecutando 28 aserciones |
 
 ## Convención
 

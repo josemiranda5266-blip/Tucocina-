@@ -50,7 +50,10 @@ app.use((req, res, next) => {
   }
 
   if (origin) {
-    if (!allowedOrigins.includes(origin)) {
+    if (isProduction && !allowedOrigins.includes(origin)) {
+      return res.status(403).json({ error: { code: 'CORS_ORIGIN_DENIED', message: 'Origen no permitido.' } });
+    }
+    if (!isProduction && allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
       return res.status(403).json({ error: { code: 'CORS_ORIGIN_DENIED', message: 'Origen no permitido.' } });
     }
     res.setHeader('Access-Control-Allow-Origin', origin);
@@ -102,7 +105,11 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
-  console.error('[Tucocina Fatal Error]:', err);
-  process.exitCode = 1;
-});
+export { app };
+
+if (process.env.NODE_ENV !== 'test') {
+  startServer().catch((err) => {
+    console.error('[Tucocina Fatal Error]:', err);
+    process.exitCode = 1;
+  });
+}
