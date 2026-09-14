@@ -3,78 +3,51 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { AlertTriangle, X } from 'lucide-react';
-
 import { HomePage } from './pages/HomePage';
 import { SearchPage } from './pages/SearchPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { VideoDetailPage } from './pages/VideoDetailPage';
 import { FavoritesPage } from './pages/FavoritesPage';
-
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminVideos } from './pages/admin/AdminVideos';
 import { AdminImportVideo } from './pages/admin/AdminImportVideo';
 import { AdminReports } from './pages/admin/AdminReports';
-
 import { Video } from './types';
+import { track, trackPageView, trackSessionStart } from './services/analytics';
 
-type AppLocation = {
-  view: string;
-  param: string;
-};
+type AppLocation = { view: string; param: string };
 
 function safeDecode(value: string): string {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return '';
-  }
+  try { return decodeURIComponent(value); } catch { return ''; }
 }
 
 function readLocation(): AppLocation {
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   const params = new URLSearchParams(window.location.search);
-
   if (path === '/') return { view: 'home', param: '' };
   if (path === '/buscar') return { view: 'search', param: params.get('q') || '' };
   if (path === '/categorias') return { view: 'categories', param: '' };
   if (path === '/favoritos') return { view: 'favorites', param: '' };
   if (path === '/admin') return { view: 'admin', param: params.get('tab') || '' };
-
   if (path.startsWith('/video/')) {
     const id = safeDecode(path.slice('/video/'.length));
     return id ? { view: 'video-detail', param: id } : { view: 'home', param: '' };
   }
-
   return { view: 'home', param: '' };
 }
 
 function writeLocation(view: string, param = '') {
   let path = '/';
   let search = '';
-
   switch (view) {
-    case 'search':
-      path = '/buscar';
-      if (param) search = `?q=${encodeURIComponent(param)}`;
-      break;
-    case 'categories':
-      path = '/categorias';
-      break;
-    case 'favorites':
-      path = '/favoritos';
-      break;
-    case 'video-detail':
-      path = param ? `/video/${encodeURIComponent(param)}` : '/';
-      break;
-    case 'admin':
-      path = '/admin';
-      if (param) search = `?tab=${encodeURIComponent(param)}`;
-      break;
-    default:
-      path = '/';
+    case 'search': path = '/buscar'; if (param) search = `?q=${encodeURIComponent(param)}`; break;
+    case 'categories': path = '/categorias'; break;
+    case 'favorites': path = '/favoritos'; break;
+    case 'video-detail': path = param ? `/video/${encodeURIComponent(param)}` : '/'; break;
+    case 'admin': path = '/admin'; if (param) search = `?tab=${encodeURIComponent(param)}`; break;
+    default: path = '/';
   }
-
   window.history.pushState({}, '', `${path}${search}`);
 }
 
@@ -87,7 +60,13 @@ export const AppContent: React.FC = () => {
   });
 
   useEffect(() => {
-    const handlePopState = () => setLocation(readLocation());
+    trackSessionStart();
+    trackPageView(window.location.pathname);
+    const handlePopState = () => {
+      const next = readLocation();
+      setLocation(next);
+      trackPageView(window.location.pathname);
+    };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
@@ -95,20 +74,19 @@ export const AppContent: React.FC = () => {
   useEffect(() => {
     if (location.view !== 'admin') return;
     const requestedTab = location.param;
-    if (requestedTab === 'videos' || requestedTab === 'import' || requestedTab === 'reports') {
-      setAdminTab(requestedTab);
-    } else {
-      setAdminTab('dashboard');
-    }
+    if (requestedTab === 'videos' || requestedTab === 'import' || requestedTab === 'reports') setAdminTab(requestedTab);
+    else setAdminTab('dashboard');
   }, [location]);
 
   const handleNavigate = (view: string, param = '') => {
     writeLocation(view, param);
     setLocation({ view, param });
+    trackPageView(view === 'home' ? '/' : window.location.pathname);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleVideoSelect = (video: Video) => {
+    track('view_video', { videoId: video.id });
     handleNavigate('video-detail', video.id);
   };
 
@@ -128,20 +106,13 @@ export const AppContent: React.FC = () => {
         </AdminLayout>
       );
     }
-
     switch (location.view) {
-      case 'home':
-        return <HomePage onNavigate={handleNavigate} onVideoSelect={handleVideoSelect} />;
-      case 'search':
-        return <SearchPage key={location.param} initialQuery={location.param} onVideoSelect={handleVideoSelect} />;
-      case 'categories':
-        return <CategoriesPage onCategorySelect={(catId) => handleNavigate('search', `cat:${catId}`)} />;
-      case 'video-detail':
-        return <VideoDetailPage videoId={location.param} onBack={() => handleNavigate('home')} />;
-      case 'favorites':
-        return <FavoritesPage onVideoSelect={handleVideoSelect} />;
-      default:
-        return <HomePage onNavigate={handleNavigate} onVideoSelect={handleVideoSelect} />;
+      case 'home': return <HomePage onNavigate={handleNavigate} onVideoSelect={handleVideoSelect} />;
+      case 'search': return <SearchPage key={location.param} initialQuery={location.param} onVideoSelect={handleVideoSelect} />;
+      case 'categories': return <CategoriesPage onCategorySelect={(catId) => { track('view_category', { categoryId: catId }); handleNavigate('search', `cat:${catId}`); }} />;
+      case 'video-detail': return <VideoDetailPage videoId={location.param} onBack={() => handleNavigate('home')} />;
+      case 'favorites': return <FavoritesPage onVideoSelect={handleVideoSelect} />;
+      default: return <HomePage onNavigate={handleNavigate} onVideoSelect={handleVideoSelect} />;
     }
   };
 
@@ -150,36 +121,18 @@ export const AppContent: React.FC = () => {
       <Header currentView={location.view} onNavigate={handleNavigate} />
       {authError && (
         <div className="bg-red-50 border-b border-red-200 px-4 py-3 text-red-800 text-sm flex items-center justify-between max-w-7xl mx-auto w-full mt-2 rounded-lg shadow-sm">
-          <div className="flex items-center space-x-2">
-            <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <div>
-              <strong className="font-semibold">Error de Autenticación:</strong> {authError}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={clearAuthError}
-            className="p-1 text-red-600 hover:text-red-900 rounded-md hover:bg-red-100 transition-colors"
-            title="Cerrar mensaje"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center space-x-2"><AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" /><div><strong className="font-semibold">Error de Autenticación:</strong> {authError}</div></div>
+          <button type="button" onClick={clearAuthError} className="p-1 text-red-600 hover:text-red-900 rounded-md hover:bg-red-100 transition-colors" title="Cerrar mensaje"><X className="w-4 h-4" /></button>
         </div>
       )}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {renderView()}
-      </main>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">{renderView()}</main>
       <Footer />
     </div>
   );
 };
 
 export function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
+  return <AuthProvider><AppContent /></AuthProvider>;
 }
 
 export default App;
