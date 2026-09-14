@@ -87,6 +87,13 @@ export const api = {
     return data.video;
   },
 
+  async adminImportVideosBulk(urls: string[]): Promise<Array<{ url: string; status: 'IMPORTED' | 'DUPLICATE' | 'FAILED'; videoId?: string; title?: string; categoryId?: string; tags?: string[]; error?: string }>> {
+    const res = await fetch('/api/admin/videos/import-bulk', { method: 'POST', headers: await getAuthHeaders(), body: JSON.stringify({ urls }) });
+    if (!res.ok) throw await parseApiError(res, 'Error al importar videos');
+    const data = await res.json();
+    return data.results;
+  },
+
   async adminGetVideos(options: { cursor?: string; limit?: number; status?: string } = {}): Promise<PaginatedResult<Video>> {
     const params = new URLSearchParams();
     if (options.cursor) params.append('cursor', options.cursor);
