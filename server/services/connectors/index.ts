@@ -1,5 +1,6 @@
 import { VideoPlatform } from '../../../src/types';
 import { validateExternalUrl } from '../../security/ssrf';
+import { resolveExternalVideoUrl } from '../resolveExternalVideoUrl';
 
 export interface ExtractedVideoMetadata {
   originalUrl: string;
@@ -99,12 +100,18 @@ export class TikTokConnector implements VideoConnector {
   canHandle(url: string): boolean { return HOSTS.tiktok.has(new URL(url).hostname.toLowerCase()); }
 
   async extract(urlStr: string): Promise<ExtractedVideoMetadata> {
-    const parsed = new URL(urlStr);
+    let resolvedUrl = urlStr;
+    const initial = new URL(urlStr);
+    if (initial.hostname.toLowerCase() === 'vm.tiktok.com') {
+      resolvedUrl = await resolveExternalVideoUrl(urlStr);
+    }
+
+    const parsed = new URL(resolvedUrl);
     const match = parsed.pathname.match(/^\/video\/(\d+)/);
     const videoId = match?.[1] || '';
-    if (!videoId) throw new Error('La URL de TikTok debe contener un ID de video válido. Pegá la URL completa del video, no un enlace corto vm.tiktok.com.');
+    if (!videoId) throw new Error('No se pudo extraer un ID de video válido de TikTok');
     return {
-      originalUrl: urlStr,
+      originalUrl: resolvedUrl,
       embedUrl: `https://www.tiktok.com/embed/v2/${videoId}`,
       platform: 'TIKTOK',
       platformVideoId: videoId,
