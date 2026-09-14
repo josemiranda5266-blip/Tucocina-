@@ -26,7 +26,11 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
     const extracted = await processExternalVideoUrl(url);
     const classification = classifyVideo(extracted);
     const db = getAdminFirestore();
-    const existingSnap = await db.collection('videos').where('originalUrl', '==', extracted.originalUrl).limit(1).get();
+    const existingSnap = await db.collection('videos')
+      .where('platform', '==', extracted.platform)
+      .where('platformVideoId', '==', extracted.platformVideoId)
+      .limit(1)
+      .get();
     if (!existingSnap.empty) {
       const existing = existingSnap.docs[0];
       return res.status(409).json({ error: { code: 'DUPLICATE_VIDEO', message: 'Este video ya se encuentra importado en el sistema.' }, video: { id: existing.id, ...existing.data() } });
