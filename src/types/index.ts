@@ -14,7 +14,7 @@ export interface Video {
   creatorUrl?: string;
   durationSeconds?: number;
   publishedAt?: string;
-  categoryId: string;
+  categoryId?: string | null;
   tags: string[];
   status: VideoStatus;
   views: number;
