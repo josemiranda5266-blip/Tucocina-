@@ -3,20 +3,20 @@ export interface VideoClassification {
   tags: string[];
 }
 
-/**
- * Cheap deterministic first-pass classifier. It never publishes content and
- * is intentionally conservative: uncertain videos remain uncategorized.
- */
+/** Cheap deterministic classifier. Only emits IDs that exist in the catalog. */
 const RULES: Array<{ id: string; words: string[] }> = [
   { id: 'cat-carnes', words: ['carne', 'asado', 'bife', 'costilla', 'milanesa', 'hamburguesa', 'cerdo', 'cordero'] },
   { id: 'cat-pollo', words: ['pollo', 'pechuga', 'alitas', 'alita'] },
   { id: 'cat-pastas', words: ['pasta', 'fideos', 'spaghetti', 'espagueti', 'ravioles', 'ñoquis', 'gnocchi', 'lasagna', 'lasaña'] },
-  { id: 'cat-pizza', words: ['pizza', 'pizzeta'] },
-  { id: 'cat-panificados', words: ['pan', 'pan casero', 'factura', 'medialuna', 'croissant', 'masa'] },
+  { id: 'cat-panaderia', words: ['pan', 'pan casero', 'panadería', 'panaderia', 'factura', 'medialuna', 'croissant', 'masa'] },
   { id: 'cat-postres', words: ['torta', 'pastel', 'budín', 'budin', 'flan', 'helado', 'galleta', 'cookie', 'brownie', 'postre', 'cheesecake'] },
-  { id: 'cat-vegetariano', words: ['vegetariano', 'vegetariana', 'vegano', 'vegana', 'verduras', 'vegetales'] },
   { id: 'cat-ensaladas', words: ['ensalada', 'ensaladas'] },
-  { id: 'cat-sopas', words: ['sopa', 'sopas', 'crema de verduras', 'caldo'] },
+  { id: 'cat-salsas', words: ['salsa', 'salsas', 'mayonesa', 'chimichurri', 'pesto'] },
+  { id: 'cat-desayunos', words: ['desayuno', 'desayunos', 'tostadas', 'omelette'] },
+  { id: 'cat-comida-rapida', words: ['pizza', 'pizzeta', 'hot dog', 'papas fritas', 'comida rápida', 'comida rapida'] },
+  { id: 'cat-saludable', words: ['vegetariano', 'vegetariana', 'vegano', 'vegana', 'verduras', 'vegetales', 'saludable'] },
+  { id: 'cat-argentina', words: ['empanada', 'empanadas', 'mate', 'locro', 'choripan', 'chimichurri', 'criolla', 'argentino', 'argentina'] },
+  { id: 'cat-internacional', words: ['sushi', 'ramen', 'tacos', 'curry', 'paella', 'wok'] },
 ];
 
 const TAG_WORDS = [
