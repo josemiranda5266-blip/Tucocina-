@@ -7,7 +7,6 @@ import { getAdminFirestore } from '../auth/firebaseAdmin';
 
 const router = Router();
 const MAX_PAGE_SIZE = 50;
-
 router.use(authenticateUser);
 router.use(requireAdmin);
 
@@ -39,12 +38,15 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
       originalUrl: extracted.originalUrl,
       embedUrl: extracted.embedUrl,
       platform: extracted.platform,
+      platformVideoId: extracted.platformVideoId,
       thumbnailUrl: extracted.thumbnailUrl,
       creatorName: extracted.creatorName,
       creatorUrl: extracted.creatorUrl || '',
       durationSeconds: extracted.durationSeconds || 0,
-      categoryId: 'cat-carnes',
-      tags: ['cocina', 'receta'],
+      // Never silently classify an imported video as a random category.
+      // The admin can assign the category/tags during the review step.
+      categoryId: 'cat-general',
+      tags: [],
       status: 'DRAFT',
       views: 0,
       createdAt: now,
@@ -68,19 +70,16 @@ router.get('/videos', async (req: AuthenticatedRequest, res: Response) => {
     let query: import('firebase-admin/firestore').Query = db.collection('videos');
     if (status) query = query.where('status', '==', status);
     query = query.orderBy('createdAt', 'desc').orderBy('__name__', 'desc');
-
     if (cursor) {
       const cursorDoc = await db.collection('videos').doc(cursor).get();
       if (!cursorDoc.exists) return res.status(400).json({ error: { code: 'INVALID_CURSOR', message: 'Cursor de paginación inválido' } });
       query = query.startAfter(cursorDoc);
     }
-
     const snapshot = await query.limit(limit + 1).get();
     const hasMore = snapshot.size > limit;
     const docs = snapshot.docs.slice(0, limit);
     const items = docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const nextCursor = hasMore ? docs[docs.length - 1]?.id || null : null;
-    return res.json({ items, limit, hasMore, nextCursor });
+    return res.json({ items, limit, hasMore, nextCursor: hasMore ? docs[docs.length - 1]?.id || null : null });
   } catch {
     return res.status(500).json({ error: { code: 'ADMIN_FETCH_ERROR', message: 'Error al consultar catálogo administrativo' } });
   }
@@ -129,12 +128,10 @@ router.get('/reports', async (req: AuthenticatedRequest, res: Response) => {
       if (!cursorDoc.exists) return res.status(400).json({ error: { code: 'INVALID_CURSOR', message: 'Cursor de paginación inválido' } });
       query = query.startAfter(cursorDoc);
     }
-
     const snapshot = await query.limit(limit + 1).get();
     const hasMore = snapshot.size > limit;
     const docs = snapshot.docs.slice(0, limit);
-    const reports = docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    return res.json({ items: reports, limit, hasMore, nextCursor: hasMore ? docs[docs.length - 1]?.id || null : null });
+    return res.json({ items: docs.map(doc => ({ id: doc.id, ...doc.data() })), limit, hasMore, nextCursor: hasMore ? docs[docs.length - 1]?.id || null : null });
   } catch {
     return res.status(500).json({ error: { code: 'REPORTS_FETCH_ERROR', message: 'Error al consultar reportes' } });
   }
@@ -160,12 +157,7 @@ router.get('/metrics', async (req: AuthenticatedRequest, res: Response) => {
     const reports = db.collection('reports');
     const users = db.collection('users');
     const [totalVideos, publishedVideos, pendingVideos, hiddenVideos, openReports, totalUsers] = await Promise.all([
-      videos.count().get(),
-      videos.where('status', '==', 'PUBLISHED').count().get(),
-      videos.where('status', 'in', ['DRAFT', 'PENDING_REVIEW']).count().get(),
-      videos.where('status', '==', 'HIDDEN').count().get(),
-      reports.where('status', '==', 'OPEN').count().get(),
-      users.count().get(),
+      videos.count().get(), videos.where('status', '==', 'PUBLISHED').count().get(), videos.where('status', 'in', ['DRAFT', 'PENDING_REVIEW']).count().get(), videos.where('status', '==', 'HIDDEN').count().get(), reports.where('status', '==', 'OPEN').count().get(), users.count().get(),
     ]);
     return res.json({ totalVideos: totalVideos.data().count, publishedVideos: publishedVideos.data().count, pendingVideos: pendingVideos.data().count, hiddenVideos: hiddenVideos.data().count, openReports: openReports.data().count, totalUsers: totalUsers.data().count });
   } catch {
