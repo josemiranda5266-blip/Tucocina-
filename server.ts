@@ -12,6 +12,7 @@ import authRoutes from './server/routes/authRoutes';
 
 import { errorHandler } from './server/middleware/errorHandler';
 import { createRateLimiter } from './server/middleware/rateLimit';
+import { storeReady } from './server/data/store';
 
 dotenv.config();
 
@@ -19,71 +20,41 @@ const app = express();
 const PORT = Number.parseInt(process.env.PORT || '3000', 10);
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Enable trust proxy for cloud environment
 app.set('trust proxy', true);
-
-// Security & body parsing
 app.use(express.json({ limit: '1mb' }));
 
-// Security headers without an extra runtime dependency.
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  if (isProduction) {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
+  if (isProduction) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
 });
 
-// CORS middleware. Handles explicit allowlist if ALLOWED_ORIGINS is set, or dynamically permits same-host/preview origins.
 app.use((req, res, next) => {
-  const envOrigins = (process.env.ALLOWED_ORIGINS || '')
-    .split(',')
-    .map(origin => origin.trim())
-    .filter(Boolean);
-
+  const envOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(origin => origin.trim()).filter(Boolean);
   const origin = req.headers.origin;
   const host = req.headers.host;
-
   let isAllowed = true;
 
   if (origin) {
     try {
       const originHost = new URL(origin).host;
-      if (
-        envOrigins.length === 0 ||
-        envOrigins.includes('*') ||
-        envOrigins.includes(origin) ||
-        originHost === host ||
-        originHost.endsWith('.run.app') ||
-        originHost.includes('localhost')
-      ) {
-        isAllowed = true;
-      } else {
-        isAllowed = false;
-      }
+      isAllowed = envOrigins.length === 0 || envOrigins.includes('*') || envOrigins.includes(origin) || originHost === host || originHost.endsWith('.run.app') || originHost.includes('localhost');
     } catch {
       isAllowed = true;
     }
-
-    if (!isAllowed) {
-      return res.status(403).json({ error: { code: 'CORS_ORIGIN_DENIED', message: 'Origen no permitido.' } });
-    }
+    if (!isAllowed) return res.status(403).json({ error: { code: 'CORS_ORIGIN_DENIED', message: 'Origen no permitido.' } });
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
   }
 
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
-  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
-// General API rate limiting. Endpoint-specific limiters add stricter protection where needed.
 const apiLimiter = createRateLimiter(15 * 60 * 1000, 1000);
 app.use('/api', apiLimiter);
 
@@ -101,22 +72,20 @@ app.use('/api/auth', authRoutes);
 app.use(errorHandler);
 
 async function startServer() {
+  // Do not accept traffic until the persistent Firestore cache is hydrated.
+  await storeReady;
+
   if (!isProduction) {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
+    const vite = await createViteServer({ server: { middlewareMode: true }, appType: 'spa' });
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath, { maxAge: '1d', index: false }));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+    app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Tucocina Server] Listening on http://0.0.0.0:${PORT}`);
+    console.log(`[CociFlash Server] Listening on http://0.0.0.0:${PORT}`);
   });
 }
 
@@ -124,7 +93,7 @@ export { app };
 
 if (process.env.NODE_ENV !== 'test') {
   startServer().catch((err) => {
-    console.error('[Tucocina Fatal Error]:', err);
+    console.error('[CociFlash Fatal Error]:', err);
     process.exitCode = 1;
   });
 }
