@@ -24,7 +24,11 @@ export async function importVideosInBulk(urls: string[]): Promise<BulkImportResu
   for (const url of uniqueUrls) {
     try {
       const extracted = await processExternalVideoUrl(url);
-      const existing = await db.collection('videos').where('originalUrl', '==', extracted.originalUrl).limit(1).get();
+      const existing = await db.collection('videos')
+        .where('platform', '==', extracted.platform)
+        .where('platformVideoId', '==', extracted.platformVideoId)
+        .limit(1)
+        .get();
       if (!existing.empty) {
         results.push({ url, status: 'DUPLICATE', videoId: existing.docs[0].id, title: String(existing.docs[0].data().title || '') });
         continue;
