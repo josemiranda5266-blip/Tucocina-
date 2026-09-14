@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { authenticateUser, AuthenticatedRequest } from '../middleware/auth';
 import { createRateLimiter } from '../middleware/rateLimit';
 import { ReportVideoSchema } from '../validators/video';
-import { getAdminFirestore } from '../auth/firebaseAdmin';
+import { dbStore, StoredReport } from '../data/store';
 
 const router = Router();
 
@@ -15,12 +15,10 @@ router.post('/', authenticateUser, reportLimiter, async (req: AuthenticatedReque
     const validated = ReportVideoSchema.parse(req.body);
     const userId = req.user?.uid;
     const userEmail = req.user?.email || '';
+    const reportId = `rep-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-    const db = getAdminFirestore();
-    const reportRef = db.collection('reports').doc();
-
-    const reportData = {
-      id: reportRef.id,
+    const reportData: StoredReport = {
+      id: reportId,
       videoId: validated.videoId,
       userId,
       userEmail,
@@ -30,17 +28,17 @@ router.post('/', authenticateUser, reportLimiter, async (req: AuthenticatedReque
       createdAt: new Date().toISOString(),
     };
 
-    await reportRef.set(reportData);
+    dbStore.addReport(reportData);
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Reporte recibido. Un administrador lo revisará a la brevedad.',
-      reportId: reportRef.id,
+      reportId: reportData.id,
     });
   } catch (error: any) {
     if (error.name === 'ZodError') {
       return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.errors[0]?.message || 'Datos de reporte inválidos' } });
     }
-    res.status(500).json({ error: { code: 'REPORT_ERROR', message: 'Error al enviar el reporte' } });
+    return res.status(500).json({ error: { code: 'REPORT_ERROR', message: 'Error al enviar el reporte' } });
   }
 });
 

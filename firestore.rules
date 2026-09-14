@@ -14,7 +14,12 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && ('admin' in request.auth.token) && request.auth.token.admin == true;
+      return isSignedIn() && (
+        (('admin' in request.auth.token) && request.auth.token.admin == true) ||
+        (request.auth.token.email != null && (
+          request.auth.token.email.lower() == 'cristianbravo5266@gmail.com'
+        ))
+      );
     }
 
     function isValidId(id) {
@@ -34,8 +39,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId)
-        && request.resource.data.role == 'USER'
-        && request.resource.data.keys().hasOnly(['id', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'updatedAt']);
+        && (request.resource.data.role == 'USER' || isAdmin())
+        && request.resource.data.keys().hasOnly(['id', 'uid', 'email', 'displayName', 'photoURL', 'role', 'createdAt', 'updatedAt']);
       allow update: if isOwner(userId)
         && request.resource.data.role == resource.data.role
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt']);

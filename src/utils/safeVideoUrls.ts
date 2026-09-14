@@ -37,9 +37,9 @@ export function getSafeEmbedUrl(url: string, platform: VideoPlatform): string | 
     if (parsed.protocol !== 'https:') return null;
     if (!EMBED_HOSTS[platform]?.has(parsed.hostname.toLowerCase())) return null;
 
-    if (platform === 'YOUTUBE' && !/^\/embed\/[a-zA-Z0-9_-]{11}$/.test(parsed.pathname)) return null;
-    if (platform === 'INSTAGRAM' && !/^\/(p|reel)\/[a-zA-Z0-9_-]+\/embed$/.test(parsed.pathname)) return null;
-    if (platform === 'TIKTOK' && !/^\/embed\/v2\/\d+$/.test(parsed.pathname)) return null;
+    if (platform === 'YOUTUBE' && !/^\/embed\/[a-zA-Z0-9_-]{11}\/?$/.test(parsed.pathname)) return null;
+    if (platform === 'INSTAGRAM' && !/^\/(?:p|reel|reels|tv)\/[a-zA-Z0-9_-]+\/embed\/?$/.test(parsed.pathname)) return null;
+    if (platform === 'TIKTOK' && !/^\/embed\/v2\/\d+\/?$/.test(parsed.pathname)) return null;
 
     return parsed.href;
   } catch {

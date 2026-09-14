@@ -4,7 +4,8 @@ import { VideoGrid } from '../components/VideoGrid';
 import { CategoryCard } from '../components/CategoryCard';
 import { Video, Category } from '../types';
 import { api } from '../services/api';
-import { ChefHat, Flame, Clock, ArrowRight, Utensils } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { ChefHat, Flame, Clock, ArrowRight, Utensils, Shield } from 'lucide-react';
 
 interface HomePageProps {
   onNavigate: (view: string, param?: string) => void;
@@ -12,6 +13,7 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect }) => {
+  const { user, isAdmin } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [recentVideos, setRecentVideos] = useState<Video[]>([]);
   const [popularVideos, setPopularVideos] = useState<Video[]>([]);
@@ -49,7 +51,35 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
 
   return (
     <div className="space-y-12 pb-12">
-      
+      {isAdmin && (
+        <div id="admin-banner-notice" className="bg-gradient-to-r from-amber-700 via-amber-800 to-stone-900 text-white p-4 sm:p-5 rounded-2xl shadow-lg border border-amber-600/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center space-x-3.5">
+            <div className="p-2.5 bg-amber-500/20 text-amber-300 rounded-xl border border-amber-400/30 shrink-0">
+              <Shield className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="font-bold text-sm text-white">Sesión de Administrador activa</span>
+                <span className="bg-amber-500 text-amber-950 font-extrabold text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Admin
+                </span>
+              </div>
+              <p className="text-xs text-amber-200/90 mt-0.5">
+                Conectado como <strong className="text-white">{user?.email}</strong>. Tenés permisos para importar videos y gestionar el catálogo.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('admin')}
+            className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold px-4 py-2.5 rounded-xl text-xs transition-all shadow active:scale-95 shrink-0"
+          >
+            <span>Ir al Panel Admin</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section id="home-hero" className="relative bg-gradient-to-br from-amber-900 via-amber-950 to-stone-900 text-white rounded-3xl p-8 sm:p-12 shadow-2xl overflow-hidden border border-amber-800/40">
         <div className="relative z-10 max-w-3xl space-y-6">

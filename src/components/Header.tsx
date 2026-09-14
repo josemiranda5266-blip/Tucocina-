@@ -62,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
 
           <div className="hidden md:flex items-center space-x-3">
             {user ? (
-              <div className="flex items-center space-x-3 bg-amber-950/40 py-1.5 px-3 rounded-full border border-amber-800/60">
+              <div className="flex items-center space-x-2.5 bg-amber-950/40 py-1 px-3 rounded-full border border-amber-800/60">
                 {user.photoURL ? (
                   <img src={user.photoURL} alt={user.displayName || 'Usuario'} className="w-7 h-7 rounded-full border border-amber-400/50 object-cover" />
                 ) : (
@@ -70,10 +70,17 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
                     <UserIcon className="w-4 h-4" aria-hidden="true" />
                   </div>
                 )}
-                <span className="text-xs font-medium text-amber-100 max-w-[120px] truncate">
-                  {user.displayName || user.email}
-                </span>
-                <button type="button" id="auth-signout-btn" onClick={signOut} title="Cerrar sesión" aria-label="Cerrar sesión" className="p-1 hover:bg-amber-800 text-amber-300 hover:text-amber-100 rounded-full transition-colors">
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-amber-100 max-w-[130px] truncate leading-tight">
+                    {user.displayName || user.email}
+                  </span>
+                  {isAdmin && (
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-300">
+                      Administrador
+                    </span>
+                  )}
+                </div>
+                <button type="button" id="auth-signout-btn" onClick={signOut} title="Cerrar sesión" aria-label="Cerrar sesión" className="p-1 hover:bg-amber-800 text-amber-300 hover:text-amber-100 rounded-full transition-colors ml-1">
                   <LogOut className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
@@ -86,6 +93,16 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
           </div>
 
           <div className="md:hidden flex items-center space-x-2">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => onNavigate('admin')}
+                className="flex items-center space-x-1 bg-amber-500 text-amber-950 px-2.5 py-1.5 rounded-lg text-xs font-bold shadow"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Admin</span>
+              </button>
+            )}
             {!user && (
               <button type="button" onClick={signInWithGoogle} className="bg-amber-500 text-amber-950 px-3 py-1.5 rounded-md text-xs font-bold">
                 Ingresar

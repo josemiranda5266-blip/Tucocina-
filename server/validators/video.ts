@@ -1,13 +1,19 @@
 import { z } from 'zod';
 
-export const ImportVideoSchema = z.object({
-  url: z.string().url('URL inválida').min(10, 'URL demasiado corta').max(1000, 'URL demasiado larga'),
-});
-
 const optionalCategoryId = z.preprocess(
   (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
   z.string().min(1, 'Categoría inválida').optional(),
 );
+
+export const ImportVideoSchema = z.object({
+  url: z.string().url('URL inválida').min(10, 'URL demasiado corta').max(1000, 'URL demasiado larga'),
+  title: z.string().min(1).max(250).optional(),
+  description: z.string().max(2500).optional(),
+  thumbnailUrl: z.string().url().or(z.literal('')).optional(),
+  creatorName: z.string().max(120).optional(),
+  categoryId: optionalCategoryId,
+  tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
+});
 
 export const UpdateVideoSchema = z.object({
   title: z.string().min(2, 'El título debe tener al menos 2 caracteres').max(200, 'Título demasiado largo').optional(),
@@ -17,6 +23,7 @@ export const UpdateVideoSchema = z.object({
   status: z.enum(['DRAFT', 'PENDING_REVIEW', 'PUBLISHED', 'HIDDEN', 'REJECTED']).optional(),
   creatorName: z.string().max(100).optional(),
   creatorUrl: z.string().url().or(z.literal('')).optional(),
+  thumbnailUrl: z.string().url().or(z.literal('')).optional(),
 });
 
 export const ReportVideoSchema = z.object({

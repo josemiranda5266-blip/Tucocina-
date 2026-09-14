@@ -34,6 +34,7 @@ export const AdminVideos: React.FC = () => {
   const [editDesc, setEditDesc] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editTags, setEditTags] = useState('');
+  const [editThumbnail, setEditThumbnail] = useState('');
   const [editStatus, setEditStatus] = useState<Video['status']>('DRAFT');
   const [saveLoading, setSaveLoading] = useState(false);
 
@@ -71,7 +72,9 @@ export const AdminVideos: React.FC = () => {
   };
 
   const handleBulkImport = async () => {
-    const urls = [...new Set(bulkUrls.split(/\r?\n/).map((url) => url.trim()).filter(Boolean))];
+    const urls: string[] = Array.from(
+      new Set(bulkUrls.split(/\r?\n/).map((url) => url.trim()).filter((url): url is string => Boolean(url)))
+    );
     if (!urls.length) {
       setError('Pegá al menos una URL, una por línea.');
       return;
@@ -119,6 +122,7 @@ export const AdminVideos: React.FC = () => {
     setEditDesc(video.description || '');
     setEditCategory(video.categoryId || '');
     setEditTags((video.tags || []).join(', '));
+    setEditThumbnail(video.thumbnailUrl || '');
     setEditStatus(video.status);
   };
 
@@ -132,6 +136,7 @@ export const AdminVideos: React.FC = () => {
         description: editDesc.trim(),
         categoryId: editCategory,
         tags: parseTags(editTags),
+        thumbnailUrl: editThumbnail.trim(),
         status: editStatus,
       });
       setEditingVideo(null);
@@ -224,6 +229,7 @@ export const AdminVideos: React.FC = () => {
             <div><label className="block text-xs font-bold text-stone-700 mb-1">Descripción</label><textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3} maxLength={2000} className="w-full bg-stone-50 border border-stone-300 rounded-xl p-2.5 text-sm" /></div>
             <div><label className="block text-xs font-bold text-stone-700 mb-1">Categoría</label><select value={editCategory} onChange={(e) => setEditCategory(e.target.value)} className="w-full bg-stone-50 border border-stone-300 rounded-xl p-2.5 text-sm"><option value="">Sin categoría</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
             <div><label className="block text-xs font-bold text-stone-700 mb-1">Tags</label><input type="text" value={editTags} onChange={(e) => setEditTags(e.target.value)} placeholder="fácil, rápido, casero" maxLength={650} className="w-full bg-stone-50 border border-stone-300 rounded-xl p-2.5 text-sm" /><p className="text-[10px] text-stone-500 mt-1">Separados por coma · máximo 20.</p></div>
+            <div><label className="block text-xs font-bold text-stone-700 mb-1">URL de Portada (Miniatura)</label><input type="url" value={editThumbnail} onChange={(e) => setEditThumbnail(e.target.value)} placeholder="https://..." className="w-full bg-stone-50 border border-stone-300 rounded-xl p-2.5 text-sm" /></div>
             <div><label className="block text-xs font-bold text-stone-700 mb-1">Estado</label><select value={editStatus} onChange={(e) => setEditStatus(e.target.value as Video['status'])} className="w-full bg-stone-50 border border-stone-300 rounded-xl p-2.5 text-sm"><option value="DRAFT">Borrador</option><option value="PENDING_REVIEW">En revisión</option><option value="PUBLISHED">Publicado</option><option value="HIDDEN">Oculto</option><option value="REJECTED">Rechazado</option></select></div>
             <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => setEditingVideo(null)} className="px-4 py-2 rounded-xl text-stone-600 hover:bg-stone-100 text-sm">Cancelar</button><button type="submit" disabled={saveLoading} className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-medium px-5 py-2 rounded-xl text-sm">{saveLoading ? 'Guardando...' : 'Guardar cambios'}</button></div>
           </form>

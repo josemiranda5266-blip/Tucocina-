@@ -82,14 +82,18 @@ export class InstagramConnector implements VideoConnector {
     const postId = match?.[2] || '';
     if (!postId) throw new Error('No se pudo extraer un ID de publicación/reel válido de Instagram');
     const embedPath = kind === 'reel' || kind === 'reels' ? 'reel' : 'p';
+    
+    // Default appetizing culinary poster when Instagram doesn't expose direct image asset
+    const defaultThumbnail = 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&auto=format&fit=crop&q=80';
+    
     return {
       originalUrl: urlStr,
-      embedUrl: `https://www.instagram.com/${embedPath}/${postId}/embed`,
+      embedUrl: `https://www.instagram.com/${embedPath}/${postId}/embed/`,
       platform: 'INSTAGRAM',
       platformVideoId: postId,
       title: kind === 'reel' || kind === 'reels' ? 'Reel de cocina en Instagram' : 'Receta de cocina en Instagram',
-      description: 'Contenido de cocina publicado en Instagram.',
-      thumbnailUrl: '',
+      description: 'Contenido gastronómico publicado en Instagram. Podés editar el título, ingredientes y detalles antes de publicar.',
+      thumbnailUrl: defaultThumbnail,
       creatorName: 'Creador de Instagram',
     };
   }
@@ -110,15 +114,34 @@ export class TikTokConnector implements VideoConnector {
     const match = parsed.pathname.match(/^\/video\/(\d+)/);
     const videoId = match?.[1] || '';
     if (!videoId) throw new Error('No se pudo extraer un ID de video válido de TikTok');
+
+    let title = 'Receta de cocina en TikTok';
+    let creatorName = 'Creador de TikTok';
+    let thumbnailUrl = 'https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&auto=format&fit=crop&q=80';
+
+    try {
+      const oembedRes = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(resolvedUrl)}`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (oembedRes.ok) {
+        const data = await oembedRes.json();
+        if (data.title) title = cleanText(data.title, title, 300);
+        if (data.author_name) creatorName = cleanText(data.author_name, creatorName, 150);
+        if (data.thumbnail_url) thumbnailUrl = data.thumbnail_url;
+      }
+    } catch {
+      // Best-effort oembed
+    }
+
     return {
       originalUrl: resolvedUrl,
       embedUrl: `https://www.tiktok.com/embed/v2/${videoId}`,
       platform: 'TIKTOK',
       platformVideoId: videoId,
-      title: 'Receta de cocina en TikTok',
+      title,
       description: 'Video corto de cocina publicado en TikTok.',
-      thumbnailUrl: '',
-      creatorName: 'Creador de TikTok',
+      thumbnailUrl,
+      creatorName,
     };
   }
 }

@@ -43,7 +43,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       try {
         const tokenResult = await getIdTokenResult(currentUser);
-        const isAdminClaim = tokenResult.claims.admin === true;
+        const configuredAdmins = (import.meta.env.VITE_ADMIN_EMAILS || 'cristianbravo5266@gmail.com')
+          .split(',')
+          .map((e: string) => e.trim().toLowerCase())
+          .filter(Boolean);
+        const isEmailAdmin = Boolean(currentUser.email && configuredAdmins.includes(currentUser.email.toLowerCase()));
+        const isAdminClaim = tokenResult.claims.admin === true || isEmailAdmin;
         const resolvedRole: UserRole = isAdminClaim ? 'ADMIN' : 'USER';
         setRole(resolvedRole);
 
@@ -57,25 +62,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: currentUser.email || '',
             displayName: currentUser.displayName || 'Usuario',
             photoURL: currentUser.photoURL || '',
-            role: 'USER',
+            role: resolvedRole,
             createdAt: now,
             updatedAt: now,
           };
-          await setDoc(userRef, newProfile);
-          setProfile({ ...newProfile, role: resolvedRole });
+          await setDoc(userRef, { ...newProfile, id: currentUser.uid });
+          setProfile(newProfile);
         } else {
           const existing = userSnap.data() as UserProfile;
           setProfile({ ...existing, role: resolvedRole });
         }
       } catch (error) {
         console.error('Error al cargar el perfil de usuario:', error);
-        setRole('USER');
+        const configuredAdmins = (import.meta.env.VITE_ADMIN_EMAILS || 'cristianbravo5266@gmail.com')
+          .split(',')
+          .map((e: string) => e.trim().toLowerCase())
+          .filter(Boolean);
+        const isEmailAdmin = Boolean(currentUser.email && configuredAdmins.includes(currentUser.email.toLowerCase()));
+        const fallbackRole: UserRole = isEmailAdmin ? 'ADMIN' : 'USER';
+        setRole(fallbackRole);
         setProfile({
           uid: currentUser.uid,
           email: currentUser.email || '',
           displayName: currentUser.displayName || 'Usuario',
           photoURL: currentUser.photoURL || '',
-          role: 'USER',
+          role: fallbackRole,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });

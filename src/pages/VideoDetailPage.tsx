@@ -81,7 +81,7 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="space-y-2">
             <span className="inline-block bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">
-              {video.categoryId.replace('cat-', '')}
+              {(video.categoryId || 'general').replace('cat-', '').replace(/-/g, ' ')}
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900 font-serif leading-tight">
               {video.title}

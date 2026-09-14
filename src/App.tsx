@@ -121,7 +121,7 @@ export const AppContent: React.FC = () => {
         <AdminLayout currentAdminTab={adminTab} onTabChange={handleAdminTabChange}>
           {adminTab === 'dashboard' && <AdminDashboard />}
           {adminTab === 'videos' && <AdminVideos />}
-          {adminTab === 'import' && <AdminImportVideo />}
+          {adminTab === 'import' && <AdminImportVideo onVideoSelect={handleVideoSelect} />}
           {adminTab === 'reports' && <AdminReports />}
         </AdminLayout>
       );

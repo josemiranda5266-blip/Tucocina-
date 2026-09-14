@@ -1,6 +1,6 @@
 import { processExternalVideoUrl } from './connectors';
 import { classifyVideo } from './videoClassification';
-import { getAdminFirestore } from '../auth/firebaseAdmin';
+import { dbStore, StoredVideo } from '../data/store';
 
 export interface BulkImportResult {
   url: string;
@@ -16,7 +16,6 @@ const MAX_BULK_ITEMS = 25;
 
 export async function importVideosInBulk(urls: string[]): Promise<BulkImportResult[]> {
   const uniqueUrls = [...new Set(urls.map(url => url.trim()).filter(Boolean))].slice(0, MAX_BULK_ITEMS);
-  const db = getAdminFirestore();
   const results: BulkImportResult[] = [];
 
   // Sequential processing deliberately limits platform/API pressure and keeps
@@ -24,21 +23,17 @@ export async function importVideosInBulk(urls: string[]): Promise<BulkImportResu
   for (const url of uniqueUrls) {
     try {
       const extracted = await processExternalVideoUrl(url);
-      const existing = await db.collection('videos')
-        .where('platform', '==', extracted.platform)
-        .where('platformVideoId', '==', extracted.platformVideoId)
-        .limit(1)
-        .get();
-      if (!existing.empty) {
-        results.push({ url, status: 'DUPLICATE', videoId: existing.docs[0].id, title: String(existing.docs[0].data().title || '') });
+      const existing = dbStore.findDuplicate(extracted.platform, extracted.platformVideoId);
+      if (existing) {
+        results.push({ url, status: 'DUPLICATE', videoId: existing.id, title: existing.title });
         continue;
       }
 
       const classification = classifyVideo(extracted);
-      const ref = db.collection('videos').doc();
       const now = new Date().toISOString();
-      const video = {
-        id: ref.id,
+      const videoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const video: StoredVideo = {
+        id: videoId,
         title: extracted.title,
         description: extracted.description,
         originalUrl: extracted.originalUrl,
@@ -56,8 +51,8 @@ export async function importVideosInBulk(urls: string[]): Promise<BulkImportResu
         createdAt: now,
         updatedAt: now,
       };
-      await ref.set(video);
-      results.push({ url, status: 'IMPORTED', videoId: ref.id, title: extracted.title, categoryId: classification.categoryId, tags: classification.tags });
+      dbStore.addVideo(video);
+      results.push({ url, status: 'IMPORTED', videoId: video.id, title: extracted.title, categoryId: classification.categoryId, tags: classification.tags });
     } catch (error: any) {
       results.push({ url, status: 'FAILED', error: error?.message || 'No se pudo importar el video' });
     }
@@ -65,3 +60,4 @@ export async function importVideosInBulk(urls: string[]): Promise<BulkImportResu
 
   return results;
 }
+
