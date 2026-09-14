@@ -8,6 +8,7 @@ import { SearchPage } from './pages/SearchPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { VideoDetailPage } from './pages/VideoDetailPage';
 import { FavoritesPage } from './pages/FavoritesPage';
+import { LegalPage, LegalSection } from './pages/LegalPage';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminVideos } from './pages/admin/AdminVideos';
@@ -30,6 +31,10 @@ function readLocation(): AppLocation {
   if (path === '/categorias') return { view: 'categories', param: '' };
   if (path === '/favoritos') return { view: 'favorites', param: '' };
   if (path === '/admin') return { view: 'admin', param: params.get('tab') || '' };
+  if (path === '/legal' || path === '/legal/privacidad') return { view: 'legal', param: 'privacy' };
+  if (path === '/legal/terminos') return { view: 'legal', param: 'terms' };
+  if (path === '/legal/cookies') return { view: 'legal', param: 'cookies' };
+  if (path === '/legal/contenido') return { view: 'legal', param: 'content' };
   if (path.startsWith('/video/')) {
     const id = safeDecode(path.slice('/video/'.length));
     return id ? { view: 'video-detail', param: id } : { view: 'home', param: '' };
@@ -46,6 +51,9 @@ function writeLocation(view: string, param = '') {
     case 'favorites': path = '/favoritos'; break;
     case 'video-detail': path = param ? `/video/${encodeURIComponent(param)}` : '/'; break;
     case 'admin': path = '/admin'; if (param) search = `?tab=${encodeURIComponent(param)}`; break;
+    case 'legal':
+      path = param === 'terms' ? '/legal/terminos' : param === 'cookies' ? '/legal/cookies' : param === 'content' ? '/legal/contenido' : '/legal/privacidad';
+      break;
     default: path = '/';
   }
   window.history.pushState({}, '', `${path}${search}`);
@@ -105,6 +113,11 @@ export const AppContent: React.FC = () => {
           {adminTab === 'reports' && <AdminReports />}
         </AdminLayout>
       );
+    }
+    if (location.view === 'legal') {
+      const validSections: LegalSection[] = ['privacy', 'terms', 'cookies', 'content'];
+      const section = validSections.includes(location.param as LegalSection) ? location.param as LegalSection : 'privacy';
+      return <LegalPage section={section} onNavigate={handleNavigate} />;
     }
     switch (location.view) {
       case 'home': return <HomePage onNavigate={handleNavigate} onVideoSelect={handleVideoSelect} />;
