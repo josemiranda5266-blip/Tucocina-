@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { authenticateUser, requireAdmin, AuthenticatedRequest } from '../middleware/auth';
 import { ImportVideoSchema, UpdateVideoSchema } from '../validators/video';
 import { processExternalVideoUrl } from '../services/connectors';
+import { classifyVideo } from '../services/videoClassification';
+import { importVideosInBulk } from '../services/bulkVideoImport';
 import { getAdminFirestore } from '../auth/firebaseAdmin';
 
 const router = Router();
@@ -16,11 +18,13 @@ function parseLimit(value: unknown, fallback = 20): number {
 }
 
 const ReportStatusSchema = z.object({ status: z.enum(['OPEN', 'REVIEWED', 'RESOLVED', 'REJECTED']) });
+const BulkImportSchema = z.object({ urls: z.array(z.string().url()).min(1).max(25) });
 
 router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { url } = ImportVideoSchema.parse(req.body);
     const extracted = await processExternalVideoUrl(url);
+    const classification = classifyVideo(extracted);
     const db = getAdminFirestore();
     const existingSnap = await db.collection('videos').where('originalUrl', '==', extracted.originalUrl).limit(1).get();
     if (!existingSnap.empty) {
@@ -42,8 +46,8 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
       creatorName: extracted.creatorName,
       creatorUrl: extracted.creatorUrl || '',
       durationSeconds: extracted.durationSeconds || 0,
-      categoryId: 'cat-general',
-      tags: [],
+      categoryId: classification.categoryId || null,
+      tags: classification.tags,
       status: 'DRAFT',
       views: 0,
       createdAt: now,
@@ -55,6 +59,17 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
   } catch (error: any) {
     if (error.name === 'ZodError') return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.errors[0]?.message || 'URL inválida' } });
     return res.status(400).json({ error: { code: 'IMPORT_FAILED', message: error.message || 'Error al procesar el video' } });
+  }
+});
+
+router.post('/videos/import-bulk', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { urls } = BulkImportSchema.parse(req.body);
+    const results = await importVideosInBulk(urls);
+    return res.status(200).json({ results });
+  } catch (error: any) {
+    if (error.name === 'ZodError') return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.errors[0]?.message || 'Lista de URLs inválida' } });
+    return res.status(400).json({ error: { code: 'BULK_IMPORT_FAILED', message: error.message || 'Error al importar videos' } });
   }
 });
 
@@ -89,6 +104,14 @@ router.patch('/videos/:id', async (req: AuthenticatedRequest, res: Response) => 
     const videoRef = db.collection('videos').doc(videoId);
     const doc = await videoRef.get();
     if (!doc.exists) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
+
+    if (updates.status === 'PUBLISHED') {
+      const data = doc.data() || {};
+      const merged = { ...data, ...updates };
+      const missing = ['title', 'originalUrl', 'embedUrl', 'platform'].filter((field) => !String(merged[field] || '').trim());
+      if (missing.length) return res.status(400).json({ error: { code: 'PUBLISH_REQUIRES_METADATA', message: `No se puede publicar: falta ${missing.join(', ')}` } });
+    }
+
     await videoRef.update({ ...updates, updatedAt: new Date().toISOString() });
     const updatedDoc = await videoRef.get();
     return res.json({ message: 'Video actualizado correctamente', video: { id: updatedDoc.id, ...updatedDoc.data() } });
