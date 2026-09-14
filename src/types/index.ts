@@ -42,6 +42,10 @@ export interface UserProfile {
   role: UserRole;
   createdAt: string;
   updatedAt: string;
+  legalVersion?: string;
+  legalAcceptedAt?: string;
+  termsAcceptedAt?: string;
+  privacyNoticeVersion?: string;
 }
 
 export interface Favorite {
