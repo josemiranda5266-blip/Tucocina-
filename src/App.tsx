@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, CURRENT_LEGAL_VERSION, useAuth } from './context/AuthContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { LegalConsentModal } from './components/LegalConsentModal';
 import { AlertTriangle, X } from 'lucide-react';
 import { HomePage } from './pages/HomePage';
 import { SearchPage } from './pages/SearchPage';
@@ -9,6 +10,7 @@ import { CategoriesPage } from './pages/CategoriesPage';
 import { VideoDetailPage } from './pages/VideoDetailPage';
 import { FavoritesPage } from './pages/FavoritesPage';
 import { LegalPage, LegalSection } from './pages/LegalPage';
+import { ContactPage } from './pages/ContactPage';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminVideos } from './pages/admin/AdminVideos';
@@ -31,6 +33,7 @@ function readLocation(): AppLocation {
   if (path === '/categorias') return { view: 'categories', param: '' };
   if (path === '/favoritos') return { view: 'favorites', param: '' };
   if (path === '/admin') return { view: 'admin', param: params.get('tab') || '' };
+  if (path === '/contacto') return { view: 'contact', param: '' };
   if (path === '/legal' || path === '/legal/privacidad') return { view: 'legal', param: 'privacy' };
   if (path === '/legal/terminos') return { view: 'legal', param: 'terms' };
   if (path === '/legal/cookies') return { view: 'legal', param: 'cookies' };
@@ -51,21 +54,22 @@ function writeLocation(view: string, param = '') {
     case 'favorites': path = '/favoritos'; break;
     case 'video-detail': path = param ? `/video/${encodeURIComponent(param)}` : '/'; break;
     case 'admin': path = '/admin'; if (param) search = `?tab=${encodeURIComponent(param)}`; break;
-    case 'legal':
-      path = param === 'terms' ? '/legal/terminos' : param === 'cookies' ? '/legal/cookies' : param === 'content' ? '/legal/contenido' : '/legal/privacidad';
-      break;
+    case 'contact': path = '/contacto'; break;
+    case 'legal': path = param === 'terms' ? '/legal/terminos' : param === 'cookies' ? '/legal/cookies' : param === 'content' ? '/legal/contenido' : '/legal/privacidad'; break;
     default: path = '/';
   }
   window.history.pushState({}, '', `${path}${search}`);
 }
 
 export const AppContent: React.FC = () => {
-  const { authError, clearAuthError } = useAuth();
+  const { user, profile, authError, clearAuthError } = useAuth();
   const [location, setLocation] = useState<AppLocation>(() => readLocation());
   const [adminTab, setAdminTab] = useState<'dashboard' | 'videos' | 'import' | 'reports'>(() => {
     const tab = new URLSearchParams(window.location.search).get('tab');
     return tab === 'videos' || tab === 'import' || tab === 'reports' ? tab : 'dashboard';
   });
+
+  const needsLegalAcceptance = Boolean(user && profile && profile.legalVersion !== CURRENT_LEGAL_VERSION);
 
   useEffect(() => {
     trackSessionStart();
@@ -105,20 +109,19 @@ export const AppContent: React.FC = () => {
 
   const renderView = () => {
     if (location.view === 'admin') {
-      return (
-        <AdminLayout currentAdminTab={adminTab} onTabChange={handleAdminTabChange}>
-          {adminTab === 'dashboard' && <AdminDashboard />}
-          {adminTab === 'videos' && <AdminVideos />}
-          {adminTab === 'import' && <AdminImportVideo onVideoSelect={handleVideoSelect} />}
-          {adminTab === 'reports' && <AdminReports />}
-        </AdminLayout>
-      );
+      return <AdminLayout currentAdminTab={adminTab} onTabChange={handleAdminTabChange}>
+        {adminTab === 'dashboard' && <AdminDashboard />}
+        {adminTab === 'videos' && <AdminVideos />}
+        {adminTab === 'import' && <AdminImportVideo onVideoSelect={handleVideoSelect} />}
+        {adminTab === 'reports' && <AdminReports />}
+      </AdminLayout>;
     }
     if (location.view === 'legal') {
       const validSections: LegalSection[] = ['privacy', 'terms', 'cookies', 'content'];
       const section = validSections.includes(location.param as LegalSection) ? location.param as LegalSection : 'privacy';
       return <LegalPage section={section} onNavigate={handleNavigate} />;
     }
+    if (location.view === 'contact') return <ContactPage onNavigate={handleNavigate} />;
     switch (location.view) {
       case 'home': return <HomePage onNavigate={handleNavigate} onVideoSelect={handleVideoSelect} />;
       case 'search': return <SearchPage key={location.param} initialQuery={location.param} onVideoSelect={handleVideoSelect} />;
@@ -132,14 +135,10 @@ export const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900 font-sans flex flex-col selection:bg-amber-500 selection:text-white">
       <Header currentView={location.view} onNavigate={handleNavigate} />
-      {authError && (
-        <div className="bg-red-50 border-b border-red-200 px-4 py-3 text-red-800 text-sm flex items-center justify-between max-w-7xl mx-auto w-full mt-2 rounded-lg shadow-sm">
-          <div className="flex items-center space-x-2"><AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" /><div><strong className="font-semibold">Error de Autenticación:</strong> {authError}</div></div>
-          <button type="button" onClick={clearAuthError} className="p-1 text-red-600 hover:text-red-900 rounded-md hover:bg-red-100 transition-colors" title="Cerrar mensaje"><X className="w-4 h-4" /></button>
-        </div>
-      )}
+      {authError && <div className="bg-red-50 border-b border-red-200 px-4 py-3 text-red-800 text-sm flex items-center justify-between max-w-7xl mx-auto w-full mt-2 rounded-lg shadow-sm"><div className="flex items-center space-x-2"><AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" /><div><strong className="font-semibold">Error de Autenticación:</strong> {authError}</div></div><button type="button" onClick={clearAuthError} className="p-1 text-red-600 hover:text-red-900 rounded-md hover:bg-red-100 transition-colors" title="Cerrar mensaje"><X className="w-4 h-4" /></button></div>}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">{renderView()}</main>
       <Footer onNavigate={handleNavigate} />
+      {needsLegalAcceptance && <LegalConsentModal onNavigate={handleNavigate} />}
     </div>
   );
 };
