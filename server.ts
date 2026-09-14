@@ -8,6 +8,8 @@ import categoryRoutes from './server/routes/categories';
 import favoriteRoutes from './server/routes/favorites';
 import reportRoutes from './server/routes/reports';
 import adminRoutes from './server/routes/admin';
+import adminAnalyticsRoutes from './server/routes/adminAnalytics';
+import analyticsRoutes from './server/routes/analytics';
 import authRoutes from './server/routes/authRoutes';
 
 import { errorHandler } from './server/middleware/errorHandler';
@@ -67,12 +69,13 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin-analytics', adminAnalyticsRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auth', authRoutes);
 
 app.use(errorHandler);
 
 async function startServer() {
-  // Do not accept traffic until the persistent Firestore cache is hydrated.
   await storeReady;
 
   if (!isProduction) {
