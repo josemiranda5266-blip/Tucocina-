@@ -6,7 +6,10 @@ import { getSafeEmbedUrl, getSafeOriginalUrl } from '../src/utils/safeVideoUrls'
 test('SSRF guard accepts supported HTTPS hosts', () => {
   assert.equal(validateExternalUrl('https://www.youtube.com/watch?v=abcdefghijk').valid, true);
   assert.equal(validateExternalUrl('https://www.instagram.com/reel/ABC123/').valid, true);
+  assert.equal(validateExternalUrl('https://m.instagram.com/reel/ABC123/').valid, true);
+  assert.equal(validateExternalUrl('https://instagr.am/reel/ABC123/').valid, true);
   assert.equal(validateExternalUrl('https://www.tiktok.com/@creator/video/123456789').valid, true);
+  assert.equal(validateExternalUrl('https://vt.tiktok.com/ZS123456/').valid, true);
 });
 
 test('SSRF guard rejects unsupported protocols and hosts', () => {

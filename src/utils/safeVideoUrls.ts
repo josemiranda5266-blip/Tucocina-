@@ -4,13 +4,18 @@ const ALLOWED_ORIGINAL_HOSTS = new Set([
   'youtube.com',
   'www.youtube.com',
   'm.youtube.com',
+  'music.youtube.com',
   'youtu.be',
   'instagram.com',
   'www.instagram.com',
+  'm.instagram.com',
+  'instagr.am',
   'tiktok.com',
   'www.tiktok.com',
   'm.tiktok.com',
   'vm.tiktok.com',
+  'vt.tiktok.com',
+  'v.tiktok.com',
 ]);
 
 const EMBED_HOSTS: Record<VideoPlatform, Set<string>> = {

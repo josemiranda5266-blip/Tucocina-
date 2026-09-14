@@ -8,8 +8,21 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
-  const { user, isAdmin, signInWithGoogle, signOut } = useAuth();
+  const { user, isAdmin, signInWithGoogle, signOut, claimAdminRole } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [claimingAdmin, setClaimingAdmin] = useState(false);
+
+  const handleClaimAdmin = async () => {
+    setClaimingAdmin(true);
+    try {
+      await claimAdminRole();
+      onNavigate('admin');
+    } catch (err: any) {
+      alert(err.message || 'Error al activar rol de administrador.');
+    } finally {
+      setClaimingAdmin(false);
+    }
+  };
 
   return (
     <header id="main-header" className="sticky top-0 z-40 bg-amber-900/95 backdrop-blur-md text-amber-50 border-b border-amber-800/50 shadow-md">
@@ -61,6 +74,20 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
           </nav>
 
           <div className="hidden md:flex items-center space-x-3">
+            {user && !isAdmin && (
+              <button
+                type="button"
+                id="claim-admin-btn"
+                onClick={handleClaimAdmin}
+                disabled={claimingAdmin}
+                className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-700/80 hover:bg-amber-600 text-amber-100 border border-amber-500/40 transition-all active:scale-95 disabled:opacity-50"
+                title="Activa los permisos de Administrador asignando el Custom Claim a tu cuenta"
+              >
+                <Shield className="w-3.5 h-3.5 text-amber-300" aria-hidden="true" />
+                <span>{claimingAdmin ? 'Activando...' : 'Activar Modo Admin'}</span>
+              </button>
+            )}
+
             {user ? (
               <div className="flex items-center space-x-2.5 bg-amber-950/40 py-1 px-3 rounded-full border border-amber-800/60">
                 {user.photoURL ? (
@@ -125,6 +152,18 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
             <button type="button" onClick={() => { onNavigate('favorites'); setMobileMenuOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-amber-100 hover:bg-amber-900 flex items-center justify-between">
               <span>Mis Favoritos</span>
               <Heart className="w-4 h-4 text-rose-400" aria-hidden="true" />
+            </button>
+          )}
+
+          {user && !isAdmin && (
+            <button
+              type="button"
+              onClick={() => { handleClaimAdmin(); setMobileMenuOpen(false); }}
+              disabled={claimingAdmin}
+              className="w-full text-left px-3 py-2 rounded-md bg-amber-700/80 text-amber-100 font-semibold flex items-center justify-between border border-amber-500/30"
+            >
+              <span>{claimingAdmin ? 'Activando...' : 'Activar Modo Admin'}</span>
+              <Shield className="w-4 h-4 text-amber-300" aria-hidden="true" />
             </button>
           )}
 

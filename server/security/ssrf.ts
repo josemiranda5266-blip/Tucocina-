@@ -4,13 +4,18 @@ export const ALLOWED_VIDEO_DOMAINS = [
   'youtube.com',
   'www.youtube.com',
   'm.youtube.com',
+  'music.youtube.com',
   'youtu.be',
   'instagram.com',
   'www.instagram.com',
+  'm.instagram.com',
+  'instagr.am',
   'tiktok.com',
   'www.tiktok.com',
   'm.tiktok.com',
   'vm.tiktok.com',
+  'vt.tiktok.com',
+  'v.tiktok.com',
 ] as const;
 
 const PRIVATE_IP_PATTERNS = [
@@ -39,11 +44,20 @@ export function validateExternalUrl(urlString: string): { valid: boolean; reason
     return { valid: false, reason: 'URL no proporcionada o formato inválido' };
   }
 
+  let cleaned = urlString.trim().replace(/^["']|["']$/g, '');
+  if (!/^https?:\/\//i.test(cleaned)) {
+    cleaned = `https://${cleaned}`;
+  }
+
   let parsedUrl: URL;
   try {
-    parsedUrl = new URL(urlString.trim());
+    parsedUrl = new URL(cleaned);
   } catch {
     return { valid: false, reason: 'Formato de URL inválido' };
+  }
+
+  if (parsedUrl.protocol === 'http:') {
+    parsedUrl.protocol = 'https:';
   }
 
   if (parsedUrl.protocol !== 'https:') {

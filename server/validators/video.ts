@@ -1,16 +1,30 @@
 import { z } from 'zod';
 
+const sanitizeUrlInput = z.preprocess((val) => {
+  if (typeof val !== 'string') return val;
+  let cleaned = val.trim().replace(/^["']|["']$/g, '');
+  if (cleaned && !/^https?:\/\//i.test(cleaned)) {
+    cleaned = `https://${cleaned}`;
+  }
+  return cleaned;
+}, z.string().url('URL inválida').min(8, 'URL demasiado corta').max(1000, 'URL demasiado larga'));
+
+const optionalString = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z.string().max(2500).optional(),
+);
+
 const optionalCategoryId = z.preprocess(
   (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
   z.string().min(1, 'Categoría inválida').optional(),
 );
 
 export const ImportVideoSchema = z.object({
-  url: z.string().url('URL inválida').min(10, 'URL demasiado corta').max(1000, 'URL demasiado larga'),
-  title: z.string().min(1).max(250).optional(),
-  description: z.string().max(2500).optional(),
-  thumbnailUrl: z.string().url().or(z.literal('')).optional(),
-  creatorName: z.string().max(120).optional(),
+  url: sanitizeUrlInput,
+  title: optionalString,
+  description: optionalString,
+  thumbnailUrl: optionalString,
+  creatorName: optionalString,
   categoryId: optionalCategoryId,
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
 });

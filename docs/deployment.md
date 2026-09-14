@@ -1,19 +1,25 @@
 # Despliegue de CO-Cocina
 
-## Variables de Entorno Requeridas
+## Configuración de Entorno
+
+La configuración de Firebase (Project ID, API Key, Auth Domain, Database ID) se lee automáticamente desde `firebase-applet-config.json`.
 
 ```env
 PORT=3000
 NODE_ENV=production
+
+# Opcional: Lista explícita de orígenes permitidos por CORS (si no se especifica, permite orígenes del mismo host/preview)
 ALLOWED_ORIGINS=https://tu-dominio.com
 
-# Firebase Admin Credentials
-FIREBASE_PROJECT_ID=tu-proyecto-id
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk@tu-proyecto.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+# Opcional: Credenciales explícitas de servicio para despliegues fuera de Google Cloud
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
 ```
 
-## Proceso de Build
+> **Nota de Seguridad**: Las funciones administrativas se gestionan estrictamente a través de Firebase Custom Claims (`admin === true`). Las variables `ADMIN_EMAILS` y `VITE_ADMIN_EMAILS` son obsoletas.
+
+## Proceso de Build y Ejecución
 ```bash
 npm run build
 npm start

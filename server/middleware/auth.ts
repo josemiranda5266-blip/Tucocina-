@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { getAdminAuth, getAppletConfig } from '../auth/firebaseAdmin';
+import { getAdminAuth, getAdminFirestore, getAppletConfig } from '../auth/firebaseAdmin';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -80,26 +80,11 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
     return next();
   }
 
-  const adminEmails = (process.env.ADMIN_EMAILS || 'cristianbravo5266@gmail.com')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-
   // 1. Try Firebase Admin verifyIdToken
   try {
     const decodedToken = await getAdminAuth().verifyIdToken(token);
     const email = decodedToken.email || '';
-    const isConfiguredAdmin = Boolean(email && adminEmails.includes(email.toLowerCase()));
-
-    if (isConfiguredAdmin && decodedToken.admin !== true) {
-      try {
-        await getAdminAuth().setCustomUserClaims(decodedToken.uid, { admin: true });
-      } catch (claimErr) {
-        // Warning logged silently without failing authentication
-      }
-    }
-
-    const role: 'USER' | 'ADMIN' = decodedToken.admin === true || isConfiguredAdmin ? 'ADMIN' : 'USER';
+    const role: 'USER' | 'ADMIN' = decodedToken.admin === true ? 'ADMIN' : 'USER';
 
     req.user = {
       uid: decodedToken.uid,
@@ -118,8 +103,7 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
     const verifiedUser = await verifyWithGoogleIdentityToolkit(token, appletConfig.apiKey);
     if (verifiedUser) {
       const email = verifiedUser.email || '';
-      const isConfiguredAdmin = Boolean(email && adminEmails.includes(email.toLowerCase()));
-      const role: 'USER' | 'ADMIN' = verifiedUser.admin === true || isConfiguredAdmin ? 'ADMIN' : 'USER';
+      const role: 'USER' | 'ADMIN' = verifiedUser.admin === true ? 'ADMIN' : 'USER';
 
       req.user = {
         uid: verifiedUser.uid,
@@ -145,8 +129,7 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
       payload.iss === `https://securetoken.google.com/${expectedProject}`
     ) {
       const email = payload.email || '';
-      const isConfiguredAdmin = Boolean(email && adminEmails.includes(email.toLowerCase()));
-      const role: 'USER' | 'ADMIN' = payload.admin === true || isConfiguredAdmin ? 'ADMIN' : 'USER';
+      const role: 'USER' | 'ADMIN' = payload.admin === true ? 'ADMIN' : 'USER';
 
       req.user = {
         uid: payload.sub,
@@ -162,14 +145,29 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
 }
 
 
-export function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+export async function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (!req.user) {
     return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Autenticación requerida' } });
   }
 
-  if (req.user.role !== 'ADMIN') {
-    return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Acceso reservado únicamente a administradores' } });
+  if (
+    req.user.role === 'ADMIN' ||
+    (req.user.email && req.user.email.toLowerCase() === 'cristianbravo5266@gmail.com')
+  ) {
+    req.user.role = 'ADMIN';
+    return next();
   }
 
-  return next();
+  try {
+    const db = getAdminFirestore();
+    const docSnap = await db.collection('users').doc(req.user.uid).get();
+    if (docSnap.exists && docSnap.data()?.role === 'ADMIN') {
+      req.user.role = 'ADMIN';
+      return next();
+    }
+  } catch (fsErr) {
+    console.warn('[requireAdmin] Advertencia al verificar Firestore role:', fsErr);
+  }
+
+  return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Acceso reservado únicamente a administradores' } });
 }

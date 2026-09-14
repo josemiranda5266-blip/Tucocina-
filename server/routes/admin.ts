@@ -40,7 +40,11 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
 
     const existing = dbStore.findDuplicate(extracted.platform, extracted.platformVideoId);
     if (existing) {
-      return res.status(409).json({ error: { code: 'DUPLICATE_VIDEO', message: 'Este video ya se encuentra importado en el sistema.' }, video: existing });
+      return res.status(200).json({
+        message: 'Este video ya se encuentra importado en el catálogo.',
+        video: existing,
+        isExisting: true,
+      });
     }
 
     const videoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;

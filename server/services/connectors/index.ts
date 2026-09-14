@@ -22,9 +22,9 @@ export interface VideoConnector {
 }
 
 const HOSTS = {
-  youtube: new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']),
-  instagram: new Set(['instagram.com', 'www.instagram.com']),
-  tiktok: new Set(['tiktok.com', 'www.tiktok.com', 'm.tiktok.com', 'vm.tiktok.com']),
+  youtube: new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be']),
+  instagram: new Set(['instagram.com', 'www.instagram.com', 'm.instagram.com', 'instagr.am']),
+  tiktok: new Set(['tiktok.com', 'www.tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com', 'v.tiktok.com']),
 };
 
 function cleanText(value: unknown, fallback: string, max: number): string {
@@ -45,6 +45,7 @@ export class YouTubeConnector implements VideoConnector {
     else if (parsed.pathname === '/watch') videoId = parsed.searchParams.get('v') || '';
     else if (parsed.pathname.startsWith('/shorts/')) videoId = parsed.pathname.split('/shorts/')[1]?.split('/')[0] || '';
     else if (parsed.pathname.startsWith('/embed/')) videoId = parsed.pathname.split('/embed/')[1]?.split('/')[0] || '';
+    else if (parsed.pathname.startsWith('/live/')) videoId = parsed.pathname.split('/live/')[1]?.split('/')[0] || '';
 
     if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) throw new Error('No se pudo extraer un ID válido de YouTube');
 
@@ -56,7 +57,7 @@ export class YouTubeConnector implements VideoConnector {
 
     try {
       const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-      const response = await fetch(oembedUrl, { headers: { 'User-Agent': 'Tucocina-Importer/1.0' }, redirect: 'error', signal: AbortSignal.timeout(3000) });
+      const response = await fetch(oembedUrl, { headers: { 'User-Agent': 'Tucocina-Importer/1.0' }, redirect: 'follow', signal: AbortSignal.timeout(5000) });
       if (response.ok) {
         const data = await response.json();
         title = cleanText(data.title, title, 300);
@@ -77,8 +78,10 @@ export class InstagramConnector implements VideoConnector {
 
   async extract(urlStr: string): Promise<ExtractedVideoMetadata> {
     const parsed = new URL(urlStr);
-    const match = parsed.pathname.match(/^\/(p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/);
-    const kind = match?.[1] || '';
+    // Support standard web (/reel/, /p/, /reels/, /tv/) and mobile share routes (/share/reel/, /share/p/, /username/reel/)
+    const match = parsed.pathname.match(/(?:share\/)?(p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i) ||
+                  parsed.pathname.match(/\/(p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
+    const kind = match?.[1]?.toLowerCase() || '';
     const postId = match?.[2] || '';
     if (!postId) throw new Error('No se pudo extraer un ID de publicación/reel válido de Instagram');
     const embedPath = kind === 'reel' || kind === 'reels' ? 'reel' : 'p';
@@ -106,12 +109,21 @@ export class TikTokConnector implements VideoConnector {
   async extract(urlStr: string): Promise<ExtractedVideoMetadata> {
     let resolvedUrl = urlStr;
     const initial = new URL(urlStr);
-    if (initial.hostname.toLowerCase() === 'vm.tiktok.com') {
-      resolvedUrl = await resolveExternalVideoUrl(urlStr);
+    if (
+      initial.hostname.toLowerCase() === 'vm.tiktok.com' ||
+      initial.hostname.toLowerCase() === 'vt.tiktok.com' ||
+      initial.hostname.toLowerCase() === 'v.tiktok.com'
+    ) {
+      try {
+        resolvedUrl = await resolveExternalVideoUrl(urlStr);
+      } catch {
+        // Fallback to initial URL if resolving short link encounters timeout
+      }
     }
 
     const parsed = new URL(resolvedUrl);
-    const match = parsed.pathname.match(/^\/video\/(\d+)/);
+    // Support /@user/video/123456, /video/123456, /v/123456 or standalone numeric id
+    const match = parsed.pathname.match(/(?:video|v)\/(\d+)/) || parsed.pathname.match(/\/(\d{15,25})/);
     const videoId = match?.[1] || '';
     if (!videoId) throw new Error('No se pudo extraer un ID de video válido de TikTok');
 

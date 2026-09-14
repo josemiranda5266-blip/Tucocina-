@@ -90,7 +90,11 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
           : '¡Video importado con éxito como Borrador! Ahora podés revisar la vista previa del video original, personalizar el título y publicarlo.'
       );
     } catch (err: any) {
-      setError(err.message || 'Error al importar video');
+      console.error('Error al importar video:', err);
+      const msg = err.message === 'Failed to fetch'
+        ? 'Error de conexión con el servidor. Por favor verificá que el servidor esté activo y reintentá.'
+        : (err.message || 'Error al importar el video. Verificá que la URL sea pública y válida.');
+      setError(msg);
     } finally {
       setLoading(false);
     }

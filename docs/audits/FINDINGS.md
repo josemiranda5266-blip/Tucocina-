@@ -33,6 +33,9 @@
 | TUC-SEC-009 | 🟠 Media | Función `isAdmin()` en `firestore.rules` podía provocar error en evaluación al no comprobar si `admin` existía en `request.auth.token` | ✅ Corregido | Se usó `('admin' in request.auth.token) && request.auth.token.admin == true` |
 | TUC-SEC-010 | 🟠 Media | Regla de lectura pública de `/videos/{videoId}` intentaba acceder a `resource.data` sin validar `resource != null` | ✅ Corregido | Se añadió salvaguarda `resource != null` para evitar runtime errors en documentos inexistentes |
 | TUC-TEST-001 | 🔴 Alta | Cobertura de Security Rules no contaba con ejecuciones automatizadas contra Firebase Local Emulator Suite | ✅ Corregido | Implementada suite en `tests/rules.test.ts` con Java 21 y Firebase Emulator ejecutando 28 aserciones |
+| TUC-AUTH-002 | 🔴 Alta | `ADMIN_EMAILS` / `VITE_ADMIN_EMAILS` se usaban para autorización y `AuthContext` carecía de `getRedirectResult` en móvil | ✅ Corregido | Eliminadas variables de email, RBAC exclusivo por Custom Claim `admin === true`, manejo de `getRedirectResult` y `signInWithRedirect` móvil |
+| TUC-AUTH-003 | 🔴 Alta | `signInWithRedirect` obligado en móviles fallaba en iframe de AI Studio (error 403 X-Frame-Options) y por cookies de terceros en Chrome Android | ✅ Corregido | `signInWithPopup` es ahora el método primario mediante gesto directo de clic en desktop y móvil; se detecta iframe y se maneja fallback a `signInWithRedirect` |
+| TUC-ENV-001 | 🟠 Media | AI Studio solicitaba variables en modal debido a `.env.example` y CORS 500 si faltaba `ALLOWED_ORIGINS` | ✅ Corregido | `.env.example` depurado, lectura automática desde `firebase-applet-config.json` y CORS dinámico para host/preview |
 
 ## Convención
 

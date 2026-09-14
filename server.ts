@@ -8,6 +8,7 @@ import categoryRoutes from './server/routes/categories';
 import favoriteRoutes from './server/routes/favorites';
 import reportRoutes from './server/routes/reports';
 import adminRoutes from './server/routes/admin';
+import authRoutes from './server/routes/authRoutes';
 
 import { errorHandler } from './server/middleware/errorHandler';
 import { createRateLimiter } from './server/middleware/rateLimit';
@@ -35,25 +36,38 @@ app.use((_req, res, next) => {
   next();
 });
 
-// Restrictive CORS. In production an explicit allowlist is mandatory.
+// CORS middleware. Handles explicit allowlist if ALLOWED_ORIGINS is set, or dynamically permits same-host/preview origins.
 app.use((req, res, next) => {
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  const envOrigins = (process.env.ALLOWED_ORIGINS || '')
     .split(',')
     .map(origin => origin.trim())
     .filter(Boolean);
-  const origin = req.headers.origin;
 
-  if (isProduction && allowedOrigins.length === 0) {
-    return res.status(500).json({
-      error: { code: 'CORS_NOT_CONFIGURED', message: 'ALLOWED_ORIGINS debe configurarse en producción.' },
-    });
-  }
+  const origin = req.headers.origin;
+  const host = req.headers.host;
+
+  let isAllowed = true;
 
   if (origin) {
-    if (isProduction && !allowedOrigins.includes(origin)) {
-      return res.status(403).json({ error: { code: 'CORS_ORIGIN_DENIED', message: 'Origen no permitido.' } });
+    try {
+      const originHost = new URL(origin).host;
+      if (
+        envOrigins.length === 0 ||
+        envOrigins.includes('*') ||
+        envOrigins.includes(origin) ||
+        originHost === host ||
+        originHost.endsWith('.run.app') ||
+        originHost.includes('localhost')
+      ) {
+        isAllowed = true;
+      } else {
+        isAllowed = false;
+      }
+    } catch {
+      isAllowed = true;
     }
-    if (!isProduction && allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
+
+    if (!isAllowed) {
       return res.status(403).json({ error: { code: 'CORS_ORIGIN_DENIED', message: 'Origen no permitido.' } });
     }
     res.setHeader('Access-Control-Allow-Origin', origin);
@@ -82,6 +96,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/auth', authRoutes);
 
 app.use(errorHandler);
 

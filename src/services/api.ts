@@ -18,8 +18,8 @@ async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response>
 
   let res = await fetch(url, { ...init, headers });
 
-  // If unauthorized and we have a logged-in user, force-refresh token and retry once
-  if (res.status === 401 && auth.currentUser) {
+  // If unauthorized or forbidden and we have a logged-in user, force-refresh token and retry once
+  if ((res.status === 401 || res.status === 403) && auth.currentUser) {
     try {
       const freshToken = await auth.currentUser.getIdToken(true);
       headers.set('Authorization', `Bearer ${freshToken}`);
@@ -35,7 +35,7 @@ async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response>
 async function parseApiError(res: Response, fallback: string): Promise<Error> {
   try {
     const data = await res.json();
-    return new Error(data?.error?.message || fallback);
+    return new Error(data?.error?.message || data?.message || fallback);
   } catch {
     return new Error(fallback);
   }
@@ -100,7 +100,17 @@ export const api = {
 
   async adminImportVideo(url: string): Promise<Video> {
     const res = await fetchWithAuth('/api/admin/videos/import', { method: 'POST', body: JSON.stringify({ url }) });
-    if (!res.ok) throw await parseApiError(res, 'Error al importar el video');
+    if (!res.ok) {
+      if (res.status === 409) {
+        try {
+          const duplicateData = await res.json();
+          if (duplicateData?.video) return duplicateData.video;
+        } catch {
+          // ignore
+        }
+      }
+      throw await parseApiError(res, 'Error al importar el video');
+    }
     const data = await res.json();
     return data.video;
   },

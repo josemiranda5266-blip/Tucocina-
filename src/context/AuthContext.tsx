@@ -3,6 +3,7 @@ import {
   User,
   signInWithPopup,
   signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   getIdTokenResult,
@@ -17,8 +18,11 @@ interface AuthContextType {
   role: UserRole;
   isAdmin: boolean;
   loading: boolean;
+  authError: string | null;
+  clearAuthError: () => void;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  claimAdminRole: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,8 +32,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [role, setRole] = useState<UserRole>('USER');
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const clearAuthError = () => setAuthError(null);
 
   useEffect(() => {
+    // Process mobile redirect authentication result on return
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          console.log('Inicio de sesión con Google (redirección) completado:', result.user.email);
+        }
+      })
+      .catch((err) => {
+        console.error('Error procesando resultado de redirección Firebase Auth:', err);
+      });
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       setLoading(true);
@@ -43,17 +61,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       try {
         const tokenResult = await getIdTokenResult(currentUser);
-        const configuredAdmins = (import.meta.env.VITE_ADMIN_EMAILS || 'cristianbravo5266@gmail.com')
-          .split(',')
-          .map((e: string) => e.trim().toLowerCase())
-          .filter(Boolean);
-        const isEmailAdmin = Boolean(currentUser.email && configuredAdmins.includes(currentUser.email.toLowerCase()));
-        const isAdminClaim = tokenResult.claims.admin === true || isEmailAdmin;
-        const resolvedRole: UserRole = isAdminClaim ? 'ADMIN' : 'USER';
-        setRole(resolvedRole);
+        const isAdminClaim = tokenResult.claims.admin === true;
 
         const userRef = doc(db, 'users', currentUser.uid);
         const userSnap = await getDoc(userRef);
+
+        let firestoreRole: UserRole = 'USER';
+        if (userSnap.exists()) {
+          const existing = userSnap.data() as UserProfile;
+          if (existing.role === 'ADMIN') {
+            firestoreRole = 'ADMIN';
+          }
+        }
+
+        const isOwnerEmail = currentUser.email?.toLowerCase() === 'cristianbravo5266@gmail.com';
+        const resolvedRole: UserRole = (isAdminClaim || firestoreRole === 'ADMIN' || isOwnerEmail) ? 'ADMIN' : 'USER';
+        setRole(resolvedRole);
 
         if (!userSnap.exists()) {
           const now = new Date().toISOString();
@@ -74,19 +97,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Error al cargar el perfil de usuario:', error);
-        const configuredAdmins = (import.meta.env.VITE_ADMIN_EMAILS || 'cristianbravo5266@gmail.com')
-          .split(',')
-          .map((e: string) => e.trim().toLowerCase())
-          .filter(Boolean);
-        const isEmailAdmin = Boolean(currentUser.email && configuredAdmins.includes(currentUser.email.toLowerCase()));
-        const fallbackRole: UserRole = isEmailAdmin ? 'ADMIN' : 'USER';
-        setRole(fallbackRole);
+        setRole('USER');
         setProfile({
           uid: currentUser.uid,
           email: currentUser.email || '',
           displayName: currentUser.displayName || 'Usuario',
           photoURL: currentUser.photoURL || '',
-          role: fallbackRole,
+          role: 'USER',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
@@ -99,19 +116,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInWithGoogle = async () => {
+    setAuthError(null);
     try {
-      // Firebase recommends redirect-based OAuth on mobile browsers because popup
-      // flows are more likely to be blocked or behave inconsistently there.
-      const isMobileBrowser = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
-      if (isMobileBrowser) {
-        await signInWithRedirect(auth, googleProvider);
-      } else {
+      const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
+
+      try {
         await signInWithPopup(auth, googleProvider);
+      } catch (popupError: any) {
+        console.warn('signInWithPopup falló o fue bloqueado, evaluando alternativa:', popupError);
+
+        if (isInIframe) {
+          throw new Error(
+            'Google OAuth no permite navegación por redirección dentro de marcos (iframe) de vista previa. Por favor abre la aplicación en una pestaña independiente del navegador.'
+          );
+        }
+
+        if (
+          popupError?.code === 'auth/popup-blocked' ||
+          popupError?.code === 'auth/popup-closed-by-user' ||
+          popupError?.code === 'auth/cancelled-popup-request' ||
+          popupError?.code === 'auth/operation-not-supported-in-this-environment'
+        ) {
+          await signInWithRedirect(auth, googleProvider);
+        } else {
+          throw popupError;
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al iniciar sesión con Google:', error);
+      let msg = error?.message || 'Error desconocido al iniciar sesión.';
+      if (error?.code === 'auth/operation-not-allowed') {
+        msg = 'El proveedor de Google no está habilitado en Firebase Authentication (Métodos de inicio de sesión).';
+      } else if (error?.code === 'auth/unauthorized-domain') {
+        msg = 'Este dominio aún no está autorizado en la consola de Firebase Authentication > Dominios Autorizados.';
+      } else if (error?.code === 'auth/popup-blocked') {
+        msg = 'El navegador bloqueó la ventana emergente. Por favor permite ventanas emergentes o abre la app en una pestaña independiente.';
+      }
+      setAuthError(`${msg} (${error?.code || 'código desconocido'})`);
       throw error;
     }
+  };
+
+  const claimAdminRole = async () => {
+    if (!auth.currentUser) {
+      throw new Error('Debes estar autenticado para activar el modo administrador.');
+    }
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch('/api/auth/claim-admin', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data?.error?.message || 'Error al solicitar el rol de administrador.');
+    }
+
+    try {
+      await getIdTokenResult(auth.currentUser, true);
+    } catch (tokenErr) {
+      console.warn('Advertencia al refrescar idToken:', tokenErr);
+    }
+    setRole('ADMIN');
+    if (profile) setProfile({ ...profile, role: 'ADMIN' });
   };
 
   const signOut = async () => {
@@ -125,7 +194,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdmin = role === 'ADMIN';
 
   return (
-    <AuthContext.Provider value={{ user, profile, role, isAdmin, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        role,
+        isAdmin,
+        loading,
+        authError,
+        clearAuthError,
+        signInWithGoogle,
+        signOut,
+        claimAdminRole,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
