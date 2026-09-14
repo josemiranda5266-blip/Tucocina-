@@ -22,7 +22,6 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
     const { url } = ImportVideoSchema.parse(req.body);
     const extracted = await processExternalVideoUrl(url);
     const db = getAdminFirestore();
-
     const existingSnap = await db.collection('videos').where('originalUrl', '==', extracted.originalUrl).limit(1).get();
     if (!existingSnap.empty) {
       const existing = existingSnap.docs[0];
@@ -43,8 +42,6 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
       creatorName: extracted.creatorName,
       creatorUrl: extracted.creatorUrl || '',
       durationSeconds: extracted.durationSeconds || 0,
-      // Never silently classify an imported video as a random category.
-      // The admin can assign the category/tags during the review step.
       categoryId: 'cat-general',
       tags: [],
       status: 'DRAFT',
@@ -78,8 +75,7 @@ router.get('/videos', async (req: AuthenticatedRequest, res: Response) => {
     const snapshot = await query.limit(limit + 1).get();
     const hasMore = snapshot.size > limit;
     const docs = snapshot.docs.slice(0, limit);
-    const items = docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    return res.json({ items, limit, hasMore, nextCursor: hasMore ? docs[docs.length - 1]?.id || null : null });
+    return res.json({ items: docs.map(doc => ({ id: doc.id, ...doc.data() })), limit, hasMore, nextCursor: hasMore ? docs[docs.length - 1]?.id || null : null });
   } catch {
     return res.status(500).json({ error: { code: 'ADMIN_FETCH_ERROR', message: 'Error al consultar catálogo administrativo' } });
   }
