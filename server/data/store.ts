@@ -16,7 +16,7 @@ export interface StoredVideo {
   publishedAt?: string;
   categoryId?: string | null;
   tags: string[];
-  status: 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'HIDDEN' | 'REJECTED';
+  status: 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'HIDDEN' | 'REJECTED' | 'DUPLICATE';
   views: number;
   createdAt: string;
   updatedAt: string;
@@ -40,149 +40,26 @@ export interface StoredFavorite {
   createdAt: string;
 }
 
+export interface StoredComment {
+  id: string;
+  videoId: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  text: string;
+  createdAt: string;
+}
+
 interface DatabaseSchema {
   videos: StoredVideo[];
   reports: StoredReport[];
   favorites: StoredFavorite[];
+  comments?: StoredComment[];
 }
 
 const DB_FILE = path.resolve(process.cwd(), 'server/data/db.json');
 
-const SEED_VIDEOS: StoredVideo[] = [
-  {
-    id: 'vid-asado-argentino',
-    title: 'Asado Criollo: Secretos del Fuego y Cortes Clásicos',
-    description: 'Guía paso a paso para dominar el fuego a leña, salar adecuadamente y lograr cortes jugosos como tira de asado, vacío y entraña.',
-    originalUrl: 'https://www.youtube.com/watch?v=WJ_wKxGz6vE',
-    embedUrl: 'https://www.youtube-nocookie.com/embed/WJ_wKxGz6vE',
-    platform: 'YOUTUBE',
-    platformVideoId: 'WJ_wKxGz6vE',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=80',
-    creatorName: 'Locos X el Asado',
-    creatorUrl: 'https://youtube.com',
-    durationSeconds: 1240,
-    categoryId: 'cat-argentina',
-    tags: ['asado', 'parrilla', 'carne', 'argentina', 'fuego'],
-    status: 'PUBLISHED',
-    views: 18450,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'vid-empanadas-mendocinas',
-    title: 'Auténticas Empanadas Mendocinas al Horno',
-    description: 'Relleno jugoso de carne cortada a cuchillo, abundante cebolla, huevo duro, aceitunas y masa casera hojaldrada con grasa vacuna.',
-    originalUrl: 'https://www.youtube.com/watch?v=Xq4y4R0b7Xg',
-    embedUrl: 'https://www.youtube-nocookie.com/embed/Xq4y4R0b7Xg',
-    platform: 'YOUTUBE',
-    platformVideoId: 'Xq4y4R0b7Xg',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=800&auto=format&fit=crop&q=80',
-    creatorName: 'Cocineros Argentinos',
-    creatorUrl: 'https://youtube.com',
-    durationSeconds: 980,
-    categoryId: 'cat-argentina',
-    tags: ['empanadas', 'criollo', 'masa casera', 'horno'],
-    status: 'PUBLISHED',
-    views: 14200,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'vid-pasta-fettuccine',
-    title: 'Fettuccine Caseros al Huevo con Pomodoro y Albahaca',
-    description: 'Aprende a preparar pasta fresca artesanal con sémola y huevos de campo, acompañada de una salsa de tomates maduros y albahaca fresca.',
-    originalUrl: 'https://www.youtube.com/watch?v=z4uK_v9bT8A',
-    embedUrl: 'https://www.youtube-nocookie.com/embed/z4uK_v9bT8A',
-    platform: 'YOUTUBE',
-    platformVideoId: 'z4uK_v9bT8A',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=800&auto=format&fit=crop&q=80',
-    creatorName: 'Pasta Grannies',
-    creatorUrl: 'https://youtube.com',
-    durationSeconds: 750,
-    categoryId: 'cat-pastas',
-    tags: ['pasta', 'fresca', 'casera', 'italiana', 'pomodoro'],
-    status: 'PUBLISHED',
-    views: 9800,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'vid-pollo-hierbas',
-    title: 'Pollo al Horno Extra Crujiente con Limón y Romero',
-    description: 'Técnica infalible para lograr piel crujiente dorada y carne tierna y jugosa con marinada cítrica de hierbas y guarnición de papas rústicas.',
-    originalUrl: 'https://www.youtube.com/watch?v=V4lR9lD1b1I',
-    embedUrl: 'https://www.youtube-nocookie.com/embed/V4lR9lD1b1I',
-    platform: 'YOUTUBE',
-    platformVideoId: 'V4lR9lD1b1I',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=800&auto=format&fit=crop&q=80',
-    creatorName: 'Chef en Casa',
-    creatorUrl: 'https://youtube.com',
-    durationSeconds: 840,
-    categoryId: 'cat-pollo',
-    tags: ['pollo', 'horno', 'crujiente', 'saludable', 'facil'],
-    status: 'PUBLISHED',
-    views: 11200,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'vid-tiramisu-clasico',
-    title: 'Tiramisú Tradicional Italiano sin Crema',
-    description: 'La receta clásica con vainillas caseras, café espresso fuerte, mascarpone auténtico y cacao amargo.',
-    originalUrl: 'https://www.youtube.com/watch?v=u1b6_1j-P6A',
-    embedUrl: 'https://www.youtube-nocookie.com/embed/u1b6_1j-P6A',
-    platform: 'YOUTUBE',
-    platformVideoId: 'u1b6_1j-P6A',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=800&auto=format&fit=crop&q=80',
-    creatorName: 'Dulce Receta',
-    creatorUrl: 'https://youtube.com',
-    durationSeconds: 620,
-    categoryId: 'cat-postres',
-    tags: ['postre', 'tiramisu', 'cafe', 'mascarpone', 'dulce'],
-    status: 'PUBLISHED',
-    views: 15600,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'vid-pan-masa-madre',
-    title: 'Pan de Masa Madre para Principiantes: Hogaza Crujiente',
-    description: 'Guía completa de fermentación en frío, pliegues y horneado en olla de hierro fundido para un alveolado perfecto.',
-    originalUrl: 'https://www.youtube.com/watch?v=eXbNsm8fV9c',
-    embedUrl: 'https://www.youtube-nocookie.com/embed/eXbNsm8fV9c',
-    platform: 'YOUTUBE',
-    platformVideoId: 'eXbNsm8fV9c',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&auto=format&fit=crop&q=80',
-    creatorName: 'El Panadero Artesano',
-    creatorUrl: 'https://youtube.com',
-    durationSeconds: 1100,
-    categoryId: 'cat-panaderia',
-    tags: ['pan', 'masa madre', 'panaderia', 'artesanal'],
-    status: 'PUBLISHED',
-    views: 8900,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'vid-risotto-hongos',
-    title: 'Risotto Cremoso de Hongos Portobello y Parmesano',
-    description: 'Aprende el nácar del arroz carnaroli, caldo caliente casero y la mantecatura perfecta con manteca fría y queso rallado.',
-    originalUrl: 'https://www.youtube.com/watch?v=H0G-5g3T_y8',
-    embedUrl: 'https://www.youtube-nocookie.com/embed/H0G-5g3T_y8',
-    platform: 'YOUTUBE',
-    platformVideoId: 'H0G-5g3T_y8',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1633964913295-ceb43826e7c9?w=800&auto=format&fit=crop&q=80',
-    creatorName: 'Gourmet Express',
-    creatorUrl: 'https://youtube.com',
-    durationSeconds: 790,
-    categoryId: 'cat-arroces',
-    tags: ['risotto', 'arroz', 'hongos', 'italiana', 'cremoso'],
-    status: 'PUBLISHED',
-    views: 7400,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+const SEED_VIDEOS: StoredVideo[] = [];
 
 class StoreManager {
   private data: DatabaseSchema;
@@ -201,6 +78,7 @@ class StoreManager {
             videos: parsed.videos,
             reports: Array.isArray(parsed.reports) ? parsed.reports : [],
             favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
+            comments: Array.isArray(parsed.comments) ? parsed.comments : [],
           };
         }
       }
@@ -213,6 +91,7 @@ class StoreManager {
       videos: [...SEED_VIDEOS],
       reports: [],
       favorites: [],
+      comments: [],
     };
     this.saveData(initial);
     return initial;
@@ -357,11 +236,78 @@ class StoreManager {
   deleteVideo(id: string): boolean {
     const before = this.data.videos.length;
     this.data.videos = this.data.videos.filter((v) => v.id !== id);
+    if (this.data.comments) {
+      this.data.comments = this.data.comments.filter((c) => c.videoId !== id);
+    }
     if (this.data.videos.length !== before) {
       this.saveData(this.data);
       return true;
     }
     return false;
+  }
+
+  purgeDuplicates(): { markedCount: number; markedIds: string[] } {
+    const seenMap = new Map<string, StoredVideo>();
+    const markedIds: string[] = [];
+
+    // Prioritize PUBLISHED videos over DRAFTs, and oldest createdAt
+    const sortedVideos = [...this.data.videos].sort((a, b) => {
+      if (a.status === 'PUBLISHED' && b.status !== 'PUBLISHED') return -1;
+      if (a.status !== 'PUBLISHED' && b.status === 'PUBLISHED') return 1;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+
+    for (const video of sortedVideos) {
+      const key = `${video.platform.toUpperCase()}:${video.platformVideoId}`;
+      if (seenMap.has(key)) {
+        if (video.status !== 'DUPLICATE') {
+          video.status = 'DUPLICATE';
+          video.updatedAt = new Date().toISOString();
+          markedIds.push(video.id);
+        }
+      } else {
+        seenMap.set(key, video);
+      }
+    }
+
+    if (markedIds.length > 0) {
+      this.saveData(this.data);
+    }
+
+    return {
+      markedCount: markedIds.length,
+      markedIds,
+    };
+  }
+
+  // Comments
+  getCommentsByVideoId(videoId: string): StoredComment[] {
+    if (!this.data.comments) return [];
+    return this.data.comments
+      .filter((c) => c.videoId === videoId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  addComment(comment: StoredComment): StoredComment {
+    if (!this.data.comments) this.data.comments = [];
+    this.data.comments.unshift(comment);
+    this.saveData(this.data);
+    return comment;
+  }
+
+  deleteComment(commentId: string, userId: string, isAdmin: boolean): boolean {
+    if (!this.data.comments) return false;
+    const idx = this.data.comments.findIndex((c) => c.id === commentId);
+    if (idx === -1) return false;
+
+    const comment = this.data.comments[idx];
+    if (comment.userId !== userId && !isAdmin) {
+      return false;
+    }
+
+    this.data.comments.splice(idx, 1);
+    this.saveData(this.data);
+    return true;
   }
 
   incrementViews(id: string): void {

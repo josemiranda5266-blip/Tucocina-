@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Category } from '../types';
 import { CategoryCard } from '../components/CategoryCard';
+import { AdSlot } from '../components/ads/AdSlot';
 import { api } from '../services/api';
 import { Utensils } from 'lucide-react';
 
@@ -34,6 +35,9 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ onCategorySelect
           Elegí tu tipo de cocina preferida para filtrar las recetas disponibles.
         </p>
       </div>
+
+      {/* Category AdSlot Placement (Inert when ads.enabled === false) */}
+      <AdSlot placement="CATEGORY_TOP" />
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-pulse">

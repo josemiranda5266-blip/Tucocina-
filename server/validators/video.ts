@@ -34,7 +34,7 @@ export const UpdateVideoSchema = z.object({
   description: z.string().max(2000, 'Descripción demasiado larga').optional(),
   categoryId: optionalCategoryId,
   tags: z.array(z.string().trim().min(1).max(30)).max(20).optional(),
-  status: z.enum(['DRAFT', 'PENDING_REVIEW', 'PUBLISHED', 'HIDDEN', 'REJECTED']).optional(),
+  status: z.enum(['DRAFT', 'PENDING_REVIEW', 'PUBLISHED', 'HIDDEN', 'REJECTED', 'DUPLICATE']).optional(),
   creatorName: z.string().max(100).optional(),
   creatorUrl: z.string().url().or(z.literal('')).optional(),
   thumbnailUrl: z.string().url().or(z.literal('')).optional(),

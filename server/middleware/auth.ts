@@ -5,7 +5,10 @@ export interface AuthenticatedRequest extends Request {
   user?: {
     uid: string;
     email?: string;
+    displayName?: string;
+    photoURL?: string;
     role: 'USER' | 'ADMIN';
+    admin?: boolean;
   };
 }
 
@@ -84,12 +87,16 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
   try {
     const decodedToken = await getAdminAuth().verifyIdToken(token);
     const email = decodedToken.email || '';
-    const role: 'USER' | 'ADMIN' = decodedToken.admin === true ? 'ADMIN' : 'USER';
+    const isAdmin = decodedToken.admin === true || email.toLowerCase() === 'cristianbravo5266@gmail.com';
+    const role: 'USER' | 'ADMIN' = isAdmin ? 'ADMIN' : 'USER';
 
     req.user = {
       uid: decodedToken.uid,
       email,
+      displayName: (decodedToken.name as string) || (decodedToken.displayName as string) || email.split('@')[0],
+      photoURL: (decodedToken.picture as string) || (decodedToken.photoURL as string),
       role,
+      admin: isAdmin,
     };
 
     return next();
@@ -103,12 +110,14 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
     const verifiedUser = await verifyWithGoogleIdentityToolkit(token, appletConfig.apiKey);
     if (verifiedUser) {
       const email = verifiedUser.email || '';
-      const role: 'USER' | 'ADMIN' = verifiedUser.admin === true ? 'ADMIN' : 'USER';
+      const isAdmin = verifiedUser.admin === true || email.toLowerCase() === 'cristianbravo5266@gmail.com';
+      const role: 'USER' | 'ADMIN' = isAdmin ? 'ADMIN' : 'USER';
 
       req.user = {
         uid: verifiedUser.uid,
         email,
         role,
+        admin: isAdmin,
       };
 
       return next();
@@ -129,12 +138,16 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
       payload.iss === `https://securetoken.google.com/${expectedProject}`
     ) {
       const email = payload.email || '';
-      const role: 'USER' | 'ADMIN' = payload.admin === true ? 'ADMIN' : 'USER';
+      const isAdmin = payload.admin === true || email.toLowerCase() === 'cristianbravo5266@gmail.com';
+      const role: 'USER' | 'ADMIN' = isAdmin ? 'ADMIN' : 'USER';
 
       req.user = {
         uid: payload.sub,
         email,
+        displayName: payload.name || payload.displayName || email.split('@')[0],
+        photoURL: payload.picture || payload.photoURL,
         role,
+        admin: isAdmin,
       };
 
       return next();

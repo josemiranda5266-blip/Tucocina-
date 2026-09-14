@@ -1,6 +1,6 @@
 export type VideoPlatform = 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK' | 'OTHER';
 
-export type VideoStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'HIDDEN' | 'REJECTED';
+export type VideoStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'HIDDEN' | 'REJECTED' | 'DUPLICATE';
 
 export interface Video {
   id: string;
@@ -68,6 +68,16 @@ export interface Report {
   reason: ReportReason;
   description: string;
   status: ReportStatus;
+  createdAt: string;
+}
+
+export interface Comment {
+  id: string;
+  videoId: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string;
+  text: string;
   createdAt: string;
 }
 

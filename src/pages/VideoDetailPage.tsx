@@ -3,6 +3,8 @@ import { Video } from '../types';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { FavoriteButton } from '../components/FavoriteButton';
 import { ReportModal } from '../components/ReportModal';
+import { VideoComments } from '../components/VideoComments';
+import { AdSlot } from '../components/ads/AdSlot';
 import { ArrowLeft, ExternalLink, Flag, Eye, Clock, User, Tag } from 'lucide-react';
 import { api } from '../services/api';
 import { getSafeOriginalUrl } from '../utils/safeVideoUrls';
@@ -74,6 +76,9 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
         <ArrowLeft className="w-4 h-4" />
         <span>Volver al catálogo</span>
       </button>
+
+      {/* Video Before AdSlot Placement (Inert when ads.enabled === false) */}
+      <AdSlot placement="VIDEO_BEFORE" />
 
       <VideoPlayer video={video} />
 
@@ -172,11 +177,16 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
         </div>
       </div>
 
+      {/* Video After AdSlot Placement (Inert when ads.enabled === false) */}
+      <AdSlot placement="VIDEO_AFTER" />
+
       <ReportModal
         videoId={video.id}
         isOpen={reportModalOpen}
         onClose={() => setReportModalOpen(false)}
       />
+
+      <VideoComments videoId={video.id} />
     </div>
   );
 };

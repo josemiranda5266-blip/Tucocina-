@@ -1,5 +1,5 @@
 import { auth } from '../config/firebase';
-import { Video, Category, PaginatedResult, VideoFilterOptions, ReportReason, Report } from '../types';
+import { Video, Category, PaginatedResult, VideoFilterOptions, ReportReason, Report, Comment } from '../types';
 
 async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
   const headers = new Headers(init?.headers || {});
@@ -162,6 +162,109 @@ export const api = {
   async adminGetMetrics(): Promise<{ totalVideos: number; publishedVideos: number; pendingVideos: number; hiddenVideos: number; openReports: number; totalUsers: number }> {
     const res = await fetchWithAuth('/api/admin/metrics');
     if (!res.ok) throw await parseApiError(res, 'Error al consultar métricas del sistema');
+    return res.json();
+  },
+
+  async adminDiscoverYoutubeCandidates(options: { query?: string; limit?: number; minViews?: number; sortBy?: string } = {}): Promise<{
+    isConfigured: boolean;
+    message?: string;
+    platform?: string;
+    query?: string;
+    totalFound: number;
+    candidates: Array<{
+      externalVideoId: string;
+      platform: 'YOUTUBE';
+      originalUrl: string;
+      embedUrl: string;
+      title: string;
+      description: string;
+      creatorName: string;
+      thumbnailUrl: string;
+      durationSeconds: number;
+      publishedAt: string;
+      views: number;
+      score: number;
+      scoreLabel: 'MUY RECOMENDADO' | 'REVISAR' | 'BAJA RELEVANCIA';
+      suggestedCategory: { id: string; name: string };
+      suggestedTags: string[];
+      isEmbeddable: boolean;
+      isSpanish: boolean;
+      isCooking: boolean;
+    }>;
+  }> {
+    const params = new URLSearchParams();
+    if (options.query) params.append('query', options.query);
+    if (options.limit) params.append('limit', options.limit.toString());
+    if (options.minViews !== undefined) params.append('minViews', options.minViews.toString());
+    if (options.sortBy) params.append('sortBy', options.sortBy);
+    const res = await fetchWithAuth(`/api/admin/discovery/youtube?${params.toString()}`);
+    if (!res.ok) throw await parseApiError(res, 'Error al buscar candidatos en YouTube');
+    return res.json();
+  },
+
+  async adminImportDiscoveryCandidate(videoId: string, categoryId?: string, tags?: string[]): Promise<Video> {
+    const res = await fetchWithAuth('/api/admin/discovery/import', {
+      method: 'POST',
+      body: JSON.stringify({ videoId, categoryId, tags }),
+    });
+    if (!res.ok) throw await parseApiError(res, 'Error al importar candidato');
+    const data = await res.json();
+    return data.video;
+  },
+
+  async adminImportDiscoveryBatch(items: Array<{ videoId: string; categoryId?: string; tags?: string[] }>): Promise<{
+    message: string;
+    importedCount: number;
+    duplicateCount: number;
+    failedCount: number;
+    results: Array<{ videoId: string; status: 'IMPORTED' | 'DUPLICATE' | 'FAILED'; importedVideoId?: string; title?: string; error?: string }>;
+  }> {
+    const res = await fetchWithAuth('/api/admin/discovery/import-batch', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+    if (!res.ok) throw await parseApiError(res, 'Error al importar lote de candidatos');
+    return res.json();
+  },
+
+  async getComments(videoId: string): Promise<Comment[]> {
+    const res = await fetchWithAuth(`/api/videos/${encodeURIComponent(videoId)}/comments`);
+    if (!res.ok) throw await parseApiError(res, 'Error al obtener comentarios');
+    const data = await res.json();
+    return data.comments || [];
+  },
+
+  async addComment(videoId: string, text: string): Promise<Comment> {
+    const res = await fetchWithAuth(`/api/videos/${encodeURIComponent(videoId)}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) throw await parseApiError(res, 'Error al publicar comentario');
+    const data = await res.json();
+    return data.comment;
+  },
+
+  async deleteComment(videoId: string, commentId: string): Promise<void> {
+    const res = await fetchWithAuth(`/api/videos/${encodeURIComponent(videoId)}/comments/${encodeURIComponent(commentId)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw await parseApiError(res, 'Error al eliminar comentario');
+  },
+
+  async adminPurgeDuplicates(): Promise<{ message: string; removedCount: number; removedIds: string[] }> {
+    const res = await fetchWithAuth('/api/admin/videos/purge-duplicates', { method: 'POST' });
+    if (!res.ok) throw await parseApiError(res, 'Error al depurar videos duplicados');
+    return res.json();
+  },
+
+  async adminPurgeOriginDeleted(): Promise<{
+    message: string;
+    checkedCount: number;
+    deletedCount: number;
+    deletedVideos: Array<{ id: string; title: string; platform: string; reason?: string }>;
+  }> {
+    const res = await fetchWithAuth('/api/admin/videos/purge-origin-deleted', { method: 'POST' });
+    if (!res.ok) throw await parseApiError(res, 'Error al verificar videos en plataforma de origen');
     return res.json();
   },
 };

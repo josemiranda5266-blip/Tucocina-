@@ -3,6 +3,7 @@ import { SearchBar } from '../components/SearchBar';
 import { FilterBar } from '../components/FilterBar';
 import { VideoGrid } from '../components/VideoGrid';
 import { Pagination } from '../components/Pagination';
+import { AdSlot } from '../components/ads/AdSlot';
 import { Video, Category, VideoPlatform } from '../types';
 import { api } from '../services/api';
 
@@ -110,6 +111,9 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
       {error && (
         <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>
       )}
+
+      {/* AdSlot Placement (Inert when ads.enabled === false) */}
+      <AdSlot placement="SEARCH_MIDDLE" />
 
       <VideoGrid videos={videos} loading={loading} onVideoSelect={onVideoSelect} />
       <Pagination currentPage={currentPage} hasMore={hasMore} onPageChange={setCurrentPage} />

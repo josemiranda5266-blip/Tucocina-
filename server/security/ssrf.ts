@@ -56,10 +56,6 @@ export function validateExternalUrl(urlString: string): { valid: boolean; reason
     return { valid: false, reason: 'Formato de URL inválido' };
   }
 
-  if (parsedUrl.protocol === 'http:') {
-    parsedUrl.protocol = 'https:';
-  }
-
   if (parsedUrl.protocol !== 'https:') {
     return { valid: false, reason: 'Solo se permiten URLs HTTPS de plataformas soportadas' };
   }

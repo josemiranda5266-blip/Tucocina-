@@ -25,7 +25,30 @@ export async function importVideosInBulk(urls: string[]): Promise<BulkImportResu
       const extracted = await processExternalVideoUrl(url);
       const existing = dbStore.findDuplicate(extracted.platform, extracted.platformVideoId);
       if (existing) {
-        results.push({ url, status: 'DUPLICATE', videoId: existing.id, title: existing.title });
+        const classification = classifyVideo(extracted);
+        const now = new Date().toISOString();
+        const videoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const dupVideo: StoredVideo = {
+          id: videoId,
+          title: extracted.title,
+          description: extracted.description,
+          originalUrl: extracted.originalUrl,
+          embedUrl: extracted.embedUrl,
+          platform: extracted.platform,
+          platformVideoId: extracted.platformVideoId,
+          thumbnailUrl: extracted.thumbnailUrl,
+          creatorName: extracted.creatorName,
+          creatorUrl: extracted.creatorUrl || '',
+          durationSeconds: extracted.durationSeconds || 0,
+          categoryId: classification.categoryId || null,
+          tags: classification.tags,
+          status: 'DUPLICATE',
+          views: 0,
+          createdAt: now,
+          updatedAt: now,
+        };
+        dbStore.addVideo(dupVideo);
+        results.push({ url, status: 'DUPLICATE', videoId: dupVideo.id, title: extracted.title, categoryId: classification.categoryId, tags: classification.tags });
         continue;
       }
 

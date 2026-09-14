@@ -2,13 +2,24 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import { authenticateUser, requireAdmin, AuthenticatedRequest } from '../middleware/auth';
 import { ImportVideoSchema, UpdateVideoSchema } from '../validators/video';
+import {
+  discoveryQuerySchema,
+  discoverySingleImportSchema,
+  discoveryBatchImportSchema,
+} from '../validators/discovery';
+import { createDiscoveryRateLimiter } from '../middleware/discoveryRateLimit';
 import { processExternalVideoUrl } from '../services/connectors';
 import { classifyVideo } from '../services/videoClassification';
 import { importVideosInBulk } from '../services/bulkVideoImport';
+import { YouTubeDiscoveryProvider } from '../services/discovery';
+import { purgeOriginDeletedVideos } from '../services/originCheck';
 import { dbStore, StoredVideo } from '../data/store';
 
 const router = Router();
 const MAX_PAGE_SIZE = 50;
+const youtubeDiscoveryProvider = new YouTubeDiscoveryProvider();
+const discoveryLimiter = createDiscoveryRateLimiter(60000, 15);
+
 router.use(authenticateUser);
 router.use(requireAdmin);
 
@@ -39,14 +50,6 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
     });
 
     const existing = dbStore.findDuplicate(extracted.platform, extracted.platformVideoId);
-    if (existing) {
-      return res.status(200).json({
-        message: 'Este video ya se encuentra importado en el catálogo.',
-        video: existing,
-        isExisting: true,
-      });
-    }
-
     const videoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const now = new Date().toISOString();
     const newVideo: StoredVideo = {
@@ -63,13 +66,16 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
       durationSeconds: extracted.durationSeconds || 0,
       categoryId: customCategoryId || classification.categoryId || null,
       tags: (customTags && customTags.length > 0) ? customTags : classification.tags,
-      status: 'DRAFT',
+      status: existing ? 'DUPLICATE' : 'DRAFT',
       views: 0,
       createdAt: now,
       updatedAt: now,
     };
 
     dbStore.addVideo(newVideo);
+    if (existing) {
+      return res.status(201).json({ message: 'El video fue detectado como duplicado y guardado en la sección de Duplicados para revisión del administrador.', video: newVideo, isDuplicate: true });
+    }
     return res.status(201).json({ message: 'Video importado con éxito como Borrador (DRAFT)', video: newVideo });
   } catch (error: any) {
     if (error.name === 'ZodError') return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.errors[0]?.message || 'URL inválida' } });
@@ -136,6 +142,33 @@ router.delete('/videos/:id', async (req: AuthenticatedRequest, res: Response) =>
   }
 });
 
+router.post('/videos/purge-duplicates', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = dbStore.purgeDuplicates();
+    return res.json({
+      message: `Verificación completada: se identificaron y enviaron ${result.markedCount} videos a la sección de Duplicados para tu revisión.`,
+      markedCount: result.markedCount,
+      markedIds: result.markedIds,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: { code: 'PURGE_DUPLICATES_FAILED', message: error?.message || 'Error al identificar duplicados' } });
+  }
+});
+
+router.post('/videos/purge-origin-deleted', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await purgeOriginDeletedVideos();
+    return res.json({
+      message: `Verificación completada: se verificaron ${result.checkedCount} videos y se eliminaron ${result.deletedCount} removidos por el creador original.`,
+      checkedCount: result.checkedCount,
+      deletedCount: result.deletedCount,
+      deletedVideos: result.deletedVideos,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: { code: 'PURGE_ORIGIN_FAILED', message: error?.message || 'Error al verificar videos en plataforma de origen' } });
+  }
+});
+
 router.get('/reports', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const limit = parseLimit(req.query.limit);
@@ -171,6 +204,211 @@ router.get('/metrics', async (req: AuthenticatedRequest, res: Response) => {
     return res.json(metrics);
   } catch {
     return res.status(500).json({ error: { code: 'METRICS_ERROR', message: 'Error al consultar métricas del sistema' } });
+  }
+});
+
+/**
+ * GET /api/admin/discovery/youtube
+ * Search YouTube for cooking video candidates matching strict quality & view metrics.
+ */
+router.get('/discovery/youtube', discoveryLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!youtubeDiscoveryProvider.isConfigured()) {
+      return res.status(200).json({
+        isConfigured: false,
+        message: 'Clave YOUTUBE_API_KEY no configurada en las variables de entorno del servidor.',
+        candidates: [],
+        totalFound: 0,
+      });
+    }
+
+    const options = discoveryQuerySchema.parse(req.query);
+    const result = await youtubeDiscoveryProvider.searchCandidates(options);
+
+    return res.json({
+      isConfigured: true,
+      platform: result.platform,
+      query: result.query,
+      totalFound: result.totalFound,
+      candidates: result.candidates,
+    });
+  } catch (error: any) {
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: error.errors[0]?.message || 'Parámetros de búsqueda no válidos' },
+      });
+    }
+    return res.status(500).json({
+      error: { code: 'DISCOVERY_SEARCH_FAILED', message: error.message || 'Error al ejecutar búsqueda en YouTube API' },
+    });
+  }
+});
+
+/**
+ * POST /api/admin/discovery/import
+ * Import a discovered video candidate as DRAFT.
+ */
+router.post('/discovery/import', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { videoId, categoryId: customCategoryId, tags: customTags } = discoverySingleImportSchema.parse(req.body);
+
+    const safeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const extracted = await processExternalVideoUrl(safeUrl);
+
+    const existing = dbStore.findDuplicate(extracted.platform, extracted.platformVideoId);
+    const classification = classifyVideo({
+      title: extracted.title,
+      description: extracted.description,
+      creatorName: extracted.creatorName,
+    });
+
+    const newVideoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const now = new Date().toISOString();
+
+    const newVideo: StoredVideo = {
+      id: newVideoId,
+      title: extracted.title,
+      description: extracted.description,
+      originalUrl: extracted.originalUrl,
+      embedUrl: extracted.embedUrl,
+      platform: extracted.platform,
+      platformVideoId: extracted.platformVideoId,
+      thumbnailUrl: extracted.thumbnailUrl,
+      creatorName: extracted.creatorName,
+      creatorUrl: extracted.creatorUrl || '',
+      durationSeconds: extracted.durationSeconds || 0,
+      categoryId: customCategoryId || classification.categoryId || null,
+      tags: customTags && customTags.length > 0 ? customTags : classification.tags,
+      status: existing ? 'DUPLICATE' : 'DRAFT',
+      views: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    dbStore.addVideo(newVideo);
+
+    if (existing) {
+      return res.status(201).json({
+        message: 'Video detectado como duplicado y enviado a la sección de Duplicados para revisión del administrador.',
+        video: newVideo,
+        isDuplicate: true,
+      });
+    }
+
+    return res.status(201).json({
+      message: 'Candidato importado correctamente en estado Borrador (DRAFT)',
+      video: newVideo,
+    });
+  } catch (error: any) {
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: error.errors[0]?.message || 'ID de video inválido' },
+      });
+    }
+    return res.status(400).json({
+      error: { code: 'DISCOVERY_IMPORT_FAILED', message: error.message || 'Error al importar video candidato' },
+    });
+  }
+});
+
+/**
+ * POST /api/admin/discovery/import-batch
+ * Batch import selected candidate videos as DRAFT.
+ */
+router.post('/discovery/import-batch', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { items } = discoveryBatchImportSchema.parse(req.body);
+
+    const results: Array<{
+      videoId: string;
+      status: 'IMPORTED' | 'DUPLICATE' | 'FAILED';
+      importedVideoId?: string;
+      title?: string;
+      error?: string;
+    }> = [];
+
+    for (const item of items) {
+      try {
+        const safeUrl = `https://www.youtube.com/watch?v=${item.videoId}`;
+        const extracted = await processExternalVideoUrl(safeUrl);
+
+        const existing = dbStore.findDuplicate(extracted.platform, extracted.platformVideoId);
+        const classification = classifyVideo({
+          title: extracted.title,
+          description: extracted.description,
+          creatorName: extracted.creatorName,
+        });
+
+        const newVideoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const now = new Date().toISOString();
+
+        const newVideo: StoredVideo = {
+          id: newVideoId,
+          title: extracted.title,
+          description: extracted.description,
+          originalUrl: extracted.originalUrl,
+          embedUrl: extracted.embedUrl,
+          platform: extracted.platform,
+          platformVideoId: extracted.platformVideoId,
+          thumbnailUrl: extracted.thumbnailUrl,
+          creatorName: extracted.creatorName,
+          creatorUrl: extracted.creatorUrl || '',
+          durationSeconds: extracted.durationSeconds || 0,
+          categoryId: item.categoryId || classification.categoryId || null,
+          tags: item.tags && item.tags.length > 0 ? item.tags : classification.tags,
+          status: existing ? 'DUPLICATE' : 'DRAFT',
+          views: 0,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        dbStore.addVideo(newVideo);
+
+        if (existing) {
+          results.push({
+            videoId: item.videoId,
+            status: 'DUPLICATE',
+            importedVideoId: newVideo.id,
+            title: newVideo.title,
+          });
+          continue;
+        }
+
+        results.push({
+          videoId: item.videoId,
+          status: 'IMPORTED',
+          importedVideoId: newVideo.id,
+          title: newVideo.title,
+        });
+      } catch (itemErr: any) {
+        results.push({
+          videoId: item.videoId,
+          status: 'FAILED',
+          error: itemErr?.message || 'Error al procesar el candidato',
+        });
+      }
+    }
+
+    const importedCount = results.filter((r) => r.status === 'IMPORTED').length;
+    const duplicateCount = results.filter((r) => r.status === 'DUPLICATE').length;
+    const failedCount = results.filter((r) => r.status === 'FAILED').length;
+
+    return res.json({
+      message: `Proceso completado: ${importedCount} importados, ${duplicateCount} duplicados, ${failedCount} fallidos.`,
+      importedCount,
+      duplicateCount,
+      failedCount,
+      results,
+    });
+  } catch (error: any) {
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: error.errors[0]?.message || 'Lote de importación inválido' },
+      });
+    }
+    return res.status(400).json({
+      error: { code: 'DISCOVERY_BATCH_FAILED', message: error.message || 'Error al ejecutar importación en lote' },
+    });
   }
 });
 

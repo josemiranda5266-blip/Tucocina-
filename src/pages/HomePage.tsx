@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { SearchBar } from '../components/SearchBar';
 import { VideoGrid } from '../components/VideoGrid';
 import { CategoryCard } from '../components/CategoryCard';
+import { AdSlot } from '../components/ads/AdSlot';
 import { Video, Category } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -80,6 +81,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
         </div>
       )}
 
+      {/* Top AdSlot Placement (Inert when ads.enabled === false) */}
+      <AdSlot placement="HOME_TOP" />
+
       {/* Hero Section */}
       <section id="home-hero" className="relative bg-gradient-to-br from-amber-900 via-amber-950 to-stone-900 text-white rounded-3xl p-8 sm:p-12 shadow-2xl overflow-hidden border border-amber-800/40">
         <div className="relative z-10 max-w-3xl space-y-6">
@@ -126,6 +130,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
           ))}
         </div>
       </section>
+
+      {/* Middle AdSlot Placement (Inert when ads.enabled === false) */}
+      <AdSlot placement="HOME_MIDDLE" />
 
       {/* Popular Videos Section */}
       <section id="home-popular" className="space-y-4">

@@ -23,11 +23,18 @@ export function createRateLimiter(windowMs = 15 * 60 * 1000, maxRequests = 100) 
   ensureCleanupTimer();
 
   return (req: Request, res: Response, next: NextFunction) => {
-    if (process.env.NODE_ENV === 'test' || process.env.DISABLE_RATE_LIMIT === 'true') {
+    if (
+      process.env.NODE_ENV === 'test' ||
+      process.env.DISABLE_RATE_LIMIT === 'true' ||
+      (req as any).user?.role === 'ADMIN' ||
+      req.originalUrl?.startsWith('/api/admin') ||
+      req.baseUrl?.startsWith('/api/admin') ||
+      req.path?.startsWith('/admin')
+    ) {
       return next();
     }
-    // req.ip respects Express's trusted-proxy configuration and avoids trusting a spoofed header directly.
-    const key = req.ip || 'unknown';
+    const userId = (req as any).user?.uid;
+    const key = userId ? `user-${userId}` : (req.ip || 'unknown');
     const now = Date.now();
     const current = memoryStore.get(key);
 

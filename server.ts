@@ -19,11 +19,11 @@ const app = express();
 const PORT = Number.parseInt(process.env.PORT || '3000', 10);
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Only trust forwarded client IP headers when the deployment explicitly says it is behind a trusted proxy.
-app.set('trust proxy', process.env.TRUST_PROXY === 'true');
+// Enable trust proxy for cloud environment
+app.set('trust proxy', true);
 
 // Security & body parsing
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '1mb' }));
 
 // Security headers without an extra runtime dependency.
 app.use((_req, res, next) => {
@@ -84,7 +84,7 @@ app.use((req, res, next) => {
 });
 
 // General API rate limiting. Endpoint-specific limiters add stricter protection where needed.
-const apiLimiter = createRateLimiter(15 * 60 * 1000, 200);
+const apiLimiter = createRateLimiter(15 * 60 * 1000, 1000);
 app.use('/api', apiLimiter);
 
 app.get('/api/health', (_req, res) => {

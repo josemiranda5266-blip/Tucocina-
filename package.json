@@ -11,7 +11,7 @@
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "tsx --test tests/security.test.ts && npm run test:rules",
+    "test": "tsx --test tests/security.test.ts tests/monetization.test.ts && npm run test:rules",
     "test:rules": "firebase emulators:exec --only firestore \"tsx --test tests/rules.test.ts tests/api.test.ts\"",
     "verify": "npm run typecheck && npm run test && npm run build"
   },
