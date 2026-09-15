@@ -155,6 +155,49 @@ export class TikTokConnector implements VideoConnector {
   }
 }
 
+async function fetchFacebookMetadata(url: string): Promise<{ title?: string; description?: string; thumbnailUrl?: string; creatorName?: string }> {
+  let currentUrl = url;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const validation = validateExternalUrl(currentUrl);
+    if (!validation.valid || !validation.url) return {};
+
+    try {
+      const response = await fetch(validation.url.href, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CociFlashImporter/1.0)' },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (!location) return {};
+        currentUrl = new URL(location, validation.url.href).href;
+        continue;
+      }
+
+      if (!response.ok) return {};
+      const html = (await response.text()).slice(0, 2_000_000);
+      const getMeta = (property: string): string | undefined => {
+        const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const match = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i')) ||
+          html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${escaped}["'][^>]*>`, 'i'));
+        return match?.[1]?.trim();
+      };
+
+      const decode = (value?: string) => value?.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+      return {
+        title: decode(getMeta('og:title')),
+        description: decode(getMeta('og:description')),
+        thumbnailUrl: decode(getMeta('og:image')),
+        creatorName: decode(getMeta('og:site_name')),
+      };
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
 export class FacebookConnector implements VideoConnector {
   platform: VideoPlatform = 'FACEBOOK';
 
@@ -177,17 +220,18 @@ export class FacebookConnector implements VideoConnector {
     }
 
     const embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(parsed.href)}&show_text=false`;
-    const thumbnailUrl = 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&auto=format&fit=crop&q=80';
+    const fallbackThumbnail = 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&auto=format&fit=crop&q=80';
+    const metadata = await fetchFacebookMetadata(parsed.href);
 
     return {
       originalUrl: parsed.href,
       embedUrl,
       platform: 'FACEBOOK',
       platformVideoId,
-      title: 'Video de cocina en Facebook',
-      description: 'Video público de cocina publicado en Facebook. El contenido se reproduce desde Facebook; CociFlash no descarga ni almacena el video.',
-      thumbnailUrl,
-      creatorName: 'Creador de Facebook',
+      title: cleanText(metadata.title, 'Video de cocina en Facebook', 300),
+      description: cleanText(metadata.description, 'Video público de cocina publicado en Facebook. El contenido se reproduce desde Facebook; CociFlash no descarga ni almacena el video.', 1000),
+      thumbnailUrl: metadata.thumbnailUrl || fallbackThumbnail,
+      creatorName: cleanText(metadata.creatorName, 'Creador de Facebook', 150),
     };
   }
 }
