@@ -8,6 +8,7 @@ import { AdSlot } from '../components/ads/AdSlot';
 import { ArrowLeft, ExternalLink, Flag, Eye, Clock, User, Tag } from 'lucide-react';
 import { api } from '../services/api';
 import { getSafeOriginalUrl } from '../utils/safeVideoUrls';
+import { track } from '../services/analytics';
 
 interface VideoDetailPageProps {
   videoId: string;
@@ -38,6 +39,13 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
 
     return () => { active = false; };
   }, [videoId]);
+
+  // A video view means the detail page was actually opened. Keeping this
+  // separate from search-result clicks avoids counting the same action twice.
+  useEffect(() => {
+    if (!video?.id) return;
+    track('view_video', { videoId: video.id });
+  }, [video?.id]);
 
   if (loading) {
     return (
@@ -77,7 +85,6 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
         <span>Volver al catálogo</span>
       </button>
 
-      {/* Video Before AdSlot Placement (Inert when ads.enabled === false) */}
       <AdSlot placement="VIDEO_BEFORE" />
 
       <VideoPlayer video={video} />
@@ -177,7 +184,6 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
         </div>
       </div>
 
-      {/* Video After AdSlot Placement (Inert when ads.enabled === false) */}
       <AdSlot placement="VIDEO_AFTER" />
 
       <ReportModal
