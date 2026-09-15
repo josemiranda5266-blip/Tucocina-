@@ -84,9 +84,6 @@ function normalizeSearchText(value: string): string {
 function matchesSearch(video: StoredVideo, query: string): boolean {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return true;
-
-  // Match every search term independently. This makes searches such as
-  // "ravioles queso" work even when the exact phrase is not stored.
   const terms = normalizedQuery.split(' ').filter(Boolean);
   const searchableText = normalizeSearchText([
     video.title,
@@ -94,7 +91,6 @@ function matchesSearch(video: StoredVideo, query: string): boolean {
     video.creatorName,
     ...(Array.isArray(video.tags) ? video.tags : []),
   ].join(' '));
-
   return terms.every((term) => searchableText.includes(term));
 }
 
@@ -110,7 +106,6 @@ class StoreManager {
 
   private async initialize(): Promise<void> {
     const db = getAdminFirestore();
-
     try {
       const [videos, reports, favorites, comments, users] = await Promise.all([
         db.collection('videos').get(),
@@ -119,7 +114,6 @@ class StoreManager {
         db.collection('comments').get(),
         db.collection('users').get(),
       ]);
-
       this.data = {
         videos: videos.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<StoredVideo, 'id'>) })),
         reports: reports.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<StoredReport, 'id'>) })),
@@ -128,8 +122,6 @@ class StoreManager {
       };
       this.knownUserCount = users.size;
 
-      // One-time recovery path: if the Firestore catalog is empty but an old
-      // local db.json contains data, import it into Firestore.
       if (this.data.videos.length === 0 && this.data.reports.length === 0 && this.data.favorites.length === 0 && this.data.comments.length === 0) {
         const legacy = this.loadLegacyData();
         if (legacy.videos.length || legacy.reports.length || legacy.favorites.length || legacy.comments.length) {
@@ -137,7 +129,6 @@ class StoreManager {
           await this.persistAll();
         }
       }
-
       this.initialized = true;
       console.log(`[Store] Firestore listo: ${this.data.videos.length} videos, ${this.data.reports.length} reportes, ${this.data.favorites.length} favoritos, ${this.data.comments.length} comentarios.`);
     } catch (error) {
@@ -165,20 +156,10 @@ class StoreManager {
   private async persistAll(): Promise<void> {
     const db = getAdminFirestore();
     const operations: Array<{ collection: keyof DatabaseSchema; item: any }> = [];
-
     const collections: Array<[keyof DatabaseSchema, string]> = [
-      ['videos', 'videos'],
-      ['reports', 'reports'],
-      ['favorites', 'favorites'],
-      ['comments', 'comments'],
+      ['videos', 'videos'], ['reports', 'reports'], ['favorites', 'favorites'], ['comments', 'comments'],
     ];
-
-    for (const [key] of collections) {
-      for (const item of this.data[key]) operations.push({ collection: key, item });
-    }
-
-    // Firestore batches are limited to 500 write operations. Keep a safety
-    // margin so this recovery path remains reliable if the catalog grows.
+    for (const [key] of collections) for (const item of this.data[key]) operations.push({ collection: key, item });
     const BATCH_SIZE = 450;
     for (let offset = 0; offset < operations.length; offset += BATCH_SIZE) {
       const batch = db.batch();
@@ -213,7 +194,6 @@ class StoreManager {
     if (options.searchQuery) items = items.filter((v) => matchesSearch(v, options.searchQuery!));
     if (options.sortBy === 'views') items.sort((a, b) => b.views - a.views);
     else items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
     const limit = options.limit || 20;
     let startIndex = 0;
     if (options.cursor) {
@@ -241,13 +221,8 @@ class StoreManager {
   }
 
   getVideoById(id: string): StoredVideo | null { return this.data.videos.find((v) => v.id === id) || null; }
-
-  findDuplicate(platform: string, platformVideoId: string): StoredVideo | null {
-    return this.data.videos.find((v) => v.platform === platform && v.platformVideoId === platformVideoId) || null;
-  }
-
+  findDuplicate(platform: string, platformVideoId: string): StoredVideo | null { return this.data.videos.find((v) => v.platform === platform && v.platformVideoId === platformVideoId) || null; }
   addVideo(video: StoredVideo): StoredVideo { this.data.videos.unshift(video); this.persistDoc('videos', video); return video; }
-
   updateVideo(id: string, updates: Partial<StoredVideo>): StoredVideo | null {
     const index = this.data.videos.findIndex((v) => v.id === id);
     if (index === -1) return null;
@@ -256,25 +231,19 @@ class StoreManager {
     this.persistDoc('videos', updated);
     return updated;
   }
-
   deleteVideo(id: string): boolean {
     const videoExists = this.data.videos.some((v) => v.id === id);
     if (!videoExists) return false;
-
-    // Capture related documents before removing them from the in-memory cache.
     const relatedComments = this.data.comments.filter((c) => c.videoId === id);
     const relatedFavorites = this.data.favorites.filter((f) => f.videoId === id);
-
     this.data.videos = this.data.videos.filter((v) => v.id !== id);
     this.data.comments = this.data.comments.filter((c) => c.videoId !== id);
     this.data.favorites = this.data.favorites.filter((f) => f.videoId !== id);
-
     this.deleteDoc('videos', id);
     for (const comment of relatedComments) this.deleteDoc('comments', comment.id);
     for (const favorite of relatedFavorites) this.deleteDoc('favorites', favorite.id);
     return true;
   }
-
   purgeDuplicates(): { markedCount: number; markedIds: string[] } {
     const seenMap = new Map<string, StoredVideo>();
     const markedIds: string[] = [];
@@ -292,13 +261,10 @@ class StoreManager {
           markedIds.push(video.id);
           this.persistDoc('videos', video);
         }
-      } else {
-        seenMap.set(key, video);
-      }
+      } else seenMap.set(key, video);
     }
     return { markedCount: markedIds.length, markedIds };
   }
-
   addReport(report: StoredReport): StoredReport { this.data.reports.unshift(report); this.persistDoc('reports', report); return report; }
   getReports(options: { status?: string; cursor?: string; limit?: number }) {
     let items = [...this.data.reports];
@@ -317,8 +283,33 @@ class StoreManager {
   getFavorites(userId: string): StoredFavorite[] { return this.data.favorites.filter((f) => f.userId === userId); }
   addComment(comment: StoredComment): StoredComment { this.data.comments.push(comment); this.persistDoc('comments', comment); return comment; }
   getComments(videoId: string): StoredComment[] { return this.data.comments.filter((c) => c.videoId === videoId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()); }
-  deleteComment(id: string): boolean { const before = this.data.comments.length; this.data.comments = this.data.comments.filter((c) => c.id !== id); if (this.data.comments.length < before) this.deleteDoc('comments', id); return this.data.comments.length < before; }
-  getMetrics() { return { videos: this.data.videos.length, publishedVideos: this.data.videos.filter((v) => v.status === 'PUBLISHED').length, pendingVideos: this.data.videos.filter((v) => v.status === 'PENDING_REVIEW').length, draftVideos: this.data.videos.filter((v) => v.status === 'DRAFT').length, users: this.knownUserCount, reports: this.data.reports.filter((r) => r.status === 'OPEN').length, favorites: this.data.favorites.length, comments: this.data.comments.length }; }
+
+  /**
+   * Deletes a comment only when the authenticated actor owns it or is an admin.
+   * Authorization lives here so every caller gets the same security boundary.
+   */
+  deleteComment(id: string, actorUserId: string, isAdmin: boolean): boolean {
+    const comment = this.data.comments.find((c) => c.id === id);
+    if (!comment) return false;
+    if (!isAdmin && comment.userId !== actorUserId) return false;
+
+    this.data.comments = this.data.comments.filter((c) => c.id !== id);
+    this.deleteDoc('comments', id);
+    return true;
+  }
+
+  getMetrics() {
+    return {
+      videos: this.data.videos.length,
+      publishedVideos: this.data.videos.filter((v) => v.status === 'PUBLISHED').length,
+      pendingVideos: this.data.videos.filter((v) => v.status === 'PENDING_REVIEW').length,
+      draftVideos: this.data.videos.filter((v) => v.status === 'DRAFT').length,
+      users: this.knownUserCount,
+      reports: this.data.reports.filter((r) => r.status === 'OPEN').length,
+      favorites: this.data.favorites.length,
+      comments: this.data.comments.length,
+    };
+  }
 }
 
 export const dbStore = new StoreManager();
