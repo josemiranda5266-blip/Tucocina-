@@ -153,7 +153,7 @@ class StoreManager {
     }
   }
 
-  private async persistAll(): Promise<void> {
+  private persistAll(): Promise<void> {
     const db = getAdminFirestore();
     const operations: Array<{ collection: keyof DatabaseSchema; item: any }> = [];
     const collections: Array<[keyof DatabaseSchema, string]> = [
@@ -161,15 +161,17 @@ class StoreManager {
     ];
     for (const [key] of collections) for (const item of this.data[key]) operations.push({ collection: key, item });
     const BATCH_SIZE = 450;
-    for (let offset = 0; offset < operations.length; offset += BATCH_SIZE) {
-      const batch = db.batch();
-      const chunk = operations.slice(offset, offset + BATCH_SIZE);
-      for (const { collection, item } of chunk) {
-        const { id, ...payload } = item;
-        batch.set(db.collection(String(collection)).doc(id), payload);
+    return (async () => {
+      for (let offset = 0; offset < operations.length; offset += BATCH_SIZE) {
+        const batch = db.batch();
+        const chunk = operations.slice(offset, offset + BATCH_SIZE);
+        for (const { collection, item } of chunk) {
+          const { id, ...payload } = item;
+          batch.set(db.collection(String(collection)).doc(id), payload);
+        }
+        await batch.commit();
       }
-      await batch.commit();
-    }
+    })();
   }
 
   private persistDoc(collection: keyof DatabaseSchema, item: any): void {
@@ -276,11 +278,41 @@ class StoreManager {
     const hasMore = startIndex + limit < items.length;
     return { items: sliced, limit, hasMore, nextCursor: hasMore && sliced.length ? sliced[sliced.length - 1].id : null, total: items.length };
   }
-  updateReport(id: string, updates: Partial<StoredReport>): StoredReport | null { const index = this.data.reports.findIndex((r) => r.id === id); if (index === -1) return null; const updated = { ...this.data.reports[index], ...updates }; this.data.reports[index] = updated; this.persistDoc('reports', updated); return updated; }
-  addFavorite(favorite: StoredFavorite): StoredFavorite { this.data.favorites.unshift(favorite); this.persistDoc('favorites', favorite); return favorite; }
+  updateReport(id: string, updates: Partial<StoredReport> | StoredReport['status']): StoredReport | null {
+    const index = this.data.reports.findIndex((r) => r.id === id);
+    if (index === -1) return null;
+    const normalizedUpdates: Partial<StoredReport> = typeof updates === 'string' ? { status: updates } : updates;
+    const updated = { ...this.data.reports[index], ...normalizedUpdates };
+    this.data.reports[index] = updated;
+    this.persistDoc('reports', updated);
+    return updated;
+  }
+  addFavorite(favorite: StoredFavorite): StoredFavorite;
+  addFavorite(userId: string, videoId: string): StoredFavorite;
+  addFavorite(favoriteOrUserId: StoredFavorite | string, videoId?: string): StoredFavorite {
+    const favorite: StoredFavorite = typeof favoriteOrUserId === 'string'
+      ? { id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, userId: favoriteOrUserId, videoId: videoId!, createdAt: new Date().toISOString() }
+      : favoriteOrUserId;
+    this.data.favorites.unshift(favorite);
+    this.persistDoc('favorites', favorite);
+    return favorite;
+  }
   removeFavorite(userId: string, videoId: string): boolean { const before = this.data.favorites.length; const found = this.data.favorites.find((f) => f.userId === userId && f.videoId === videoId); this.data.favorites = this.data.favorites.filter((f) => !(f.userId === userId && f.videoId === videoId)); if (found) this.deleteDoc('favorites', found.id); return this.data.favorites.length < before; }
   isFavorite(userId: string, videoId: string): boolean { return this.data.favorites.some((f) => f.userId === userId && f.videoId === videoId); }
-  getFavorites(userId: string): StoredFavorite[] { return this.data.favorites.filter((f) => f.userId === userId); }
+  getFavorites(userId: string): StoredFavorite[];
+  getFavorites(userId: string, limit: number, cursor?: string): { items: StoredFavorite[]; limit: number; hasMore: boolean; nextCursor: string | null; total: number };
+  getFavorites(userId: string, limit?: number, cursor?: string): StoredFavorite[] | { items: StoredFavorite[]; limit: number; hasMore: boolean; nextCursor: string | null; total: number } {
+    const items = this.data.favorites.filter((f) => f.userId === userId);
+    if (limit === undefined) return items;
+    let startIndex = 0;
+    if (cursor) {
+      const found = items.findIndex((f) => f.id === cursor);
+      if (found !== -1) startIndex = found + 1;
+    }
+    const sliced = items.slice(startIndex, startIndex + limit);
+    const hasMore = startIndex + limit < items.length;
+    return { items: sliced, limit, hasMore, nextCursor: hasMore && sliced.length ? sliced[sliced.length - 1].id : null, total: items.length };
+  }
   addComment(comment: StoredComment): StoredComment { this.data.comments.push(comment); this.persistDoc('comments', comment); return comment; }
   getComments(videoId: string): StoredComment[] { return this.data.comments.filter((c) => c.videoId === videoId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()); }
 
