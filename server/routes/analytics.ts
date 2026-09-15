@@ -48,8 +48,6 @@ async function isAdminRequest(req: any): Promise<boolean> {
     const userSnap = await getAdminFirestore().collection('users').doc(decoded.uid).get();
     return userSnap.exists && userSnap.data()?.role === 'ADMIN';
   } catch {
-    // Analytics is public/non-blocking; invalid or expired optional auth simply
-    // falls back to treating the request as anonymous.
     return false;
   }
 }
@@ -60,7 +58,6 @@ router.post('/event', analyticsLimiter, async (req, res) => {
     return res.status(400).json({ error: { code: 'INVALID_EVENT', message: 'Evento de analítica no permitido.' } });
   }
 
-  // Never contaminate audience metrics with administrator activity.
   if (await isAdminRequest(req)) return res.status(204).send();
 
   const date = dayKey();
@@ -82,22 +79,26 @@ router.post('/event', analyticsLimiter, async (req, res) => {
       base.collection('events').doc(event).set({ count: FieldValue.increment(1) }, { merge: true }),
     ];
 
-    // Visitor/session documents are the source of truth for unique audience
-    // metrics. Store their latest country/device so the admin dashboard does
-    // not confuse event volume with visitor volume.
     if (sessionId) {
       operations.push(base.collection('sessions').doc(sessionId).set({ lastSeenAt: now, country, device }, { merge: true }));
     }
     if (visitorId) {
       operations.push(base.collection('visitors').doc(visitorId).set({ lastSeenAt: now, country, device }, { merge: true }));
     }
-    if (videoId && ['view_video', 'video_play', 'favorite_add', 'share_video'].includes(event)) {
-      operations.push(base.collection('videos').doc(videoId).set({ count: FieldValue.increment(1), lastEvent: event }, { merge: true }));
+
+    // Keep each video/event pair in its own document. A single video can have
+    // opens, plays, shares and external clicks; storing them in one counter
+    // would overwrite the event type and make the funnel unreliable.
+    if (videoId && ['view_video', 'video_play', 'video_open_external', 'favorite_add', 'share_video'].includes(event)) {
+      const interactionKey = Buffer.from(`${videoId}:${event}`).toString('base64url').slice(0, 180);
+      operations.push(base.collection('video_interactions').doc(interactionKey).set({ videoId, event, count: FieldValue.increment(1), updatedAt: now }, { merge: true }));
     }
     if (query && event === 'search_performed') {
-      const normalizedQuery = query.toLowerCase().trim().replace(/\s+/g, ' ');
-      const searchKey = Buffer.from(normalizedQuery).toString('base64url').slice(0, 120);
-      operations.push(base.collection('searches').doc(searchKey).set({ query: normalizedQuery, count: FieldValue.increment(1) }, { merge: true }));
+      const normalizedQuery = query.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+      if (normalizedQuery && normalizedQuery !== 'all') {
+        const searchKey = Buffer.from(normalizedQuery).toString('base64url').slice(0, 120);
+        operations.push(base.collection('searches').doc(searchKey).set({ query: normalizedQuery, count: FieldValue.increment(1) }, { merge: true }));
+      }
     }
     if (categoryId && event === 'view_category') {
       operations.push(base.collection('categories').doc(categoryId).set({ count: FieldValue.increment(1) }, { merge: true }));
@@ -107,7 +108,6 @@ router.post('/event', analyticsLimiter, async (req, res) => {
     return res.status(204).send();
   } catch (error) {
     console.warn('[analytics] Failed to persist event:', error);
-    // Analytics must never break the public application.
     return res.status(204).send();
   }
 });
