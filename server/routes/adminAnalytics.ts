@@ -23,11 +23,22 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
   const days = Math.min(90, Math.max(1, Number.isFinite(requestedDays) ? requestedDays : 7));
   try {
     const db = getAdminFirestore();
+    const [videoSnapshot] = await Promise.all([db.collection('videos').get()]);
+    const videoCatalog = new Map<string, { title: string; creatorName?: string; platform?: string }>();
+    videoSnapshot.docs.forEach((doc) => {
+      const data = doc.data() as { title?: string; creatorName?: string; platform?: string };
+      videoCatalog.set(doc.id, {
+        title: data.title || 'Video sin título',
+        creatorName: data.creatorName,
+        platform: data.platform,
+      });
+    });
+
     const daily: Array<Record<string, any>> = [];
     let visitors = 0, sessions = 0, pageViews = 0, videoViews = 0, videoPlays = 0, searches = 0, favorites = 0, shares = 0, signUps = 0, logins = 0;
     const countries = new Map<string, number>();
     const devices = new Map<string, number>();
-    const videos = new Map<string, { id: string; count: number }>();
+    const videos = new Map<string, { id: string; title: string; creatorName?: string; platform?: string; count: number }>();
     const searchTerms = new Map<string, { query: string; count: number }>();
 
     for (let offset = days - 1; offset >= 0; offset -= 1) {
@@ -44,7 +55,17 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
       visitors += visitorSnap.size; sessions += sessionSnap.size; pageViews += dayPageViews; videoViews += dayVideoViews; videoPlays += eventMap.get('video_play') || 0; searches += daySearches; favorites += dayFavorites; shares += eventMap.get('share_video') || 0; signUps += eventMap.get('sign_up') || 0; logins += eventMap.get('login') || 0;
       for (const row of countryRows as any[]) countries.set(row.id, (countries.get(row.id) || 0) + Number(row.count || 0));
       for (const row of deviceRows as any[]) devices.set(row.id, (devices.get(row.id) || 0) + Number(row.count || 0));
-      for (const row of videoRows as any[]) videos.set(row.id, { id: row.id, count: (videos.get(row.id)?.count || 0) + Number(row.count || 0) });
+      for (const row of videoRows as any[]) {
+        const catalog = videoCatalog.get(row.id);
+        const previous = videos.get(row.id);
+        videos.set(row.id, {
+          id: row.id,
+          title: catalog?.title || 'Video no encontrado',
+          creatorName: catalog?.creatorName,
+          platform: catalog?.platform,
+          count: (previous?.count || 0) + Number(row.count || 0),
+        });
+      }
       for (const row of searchRows as any[]) searchTerms.set(row.id, { query: row.query || row.id, count: (searchTerms.get(row.id)?.count || 0) + Number(row.count || 0) });
       daily.push({ date, visitors: visitorSnap.size, sessions: sessionSnap.size, pageViews: dayPageViews, videoViews: dayVideoViews, searches: daySearches, favorites: dayFavorites });
     }
