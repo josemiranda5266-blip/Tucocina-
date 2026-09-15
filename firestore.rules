@@ -28,8 +28,10 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
 
       match /comments/{commentId} {
-        allow get, list: if true;
+        // Comments are readable only when the parent video is published.
+        allow get, list: if get(/databases/$(database)/documents/videos/$(videoId)).data.status == 'PUBLISHED' || isAdmin();
         allow create: if isSignedIn()
+          && get(/databases/$(database)/documents/videos/$(videoId)).data.status == 'PUBLISHED'
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.videoId == videoId
           && request.resource.data.text is string
