@@ -81,6 +81,37 @@ function normalizeSearchText(value: string): string {
     .replace(/\s+/g, ' ');
 }
 
+function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > 1) return 2;
+  const previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      current[j] = Math.min(
+        current[j - 1] + 1,
+        previous[j] + 1,
+        previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+    for (let j = 0; j <= b.length; j += 1) previous[j] = current[j];
+  }
+  return previous[b.length];
+}
+
+function termMatchesSearchableText(term: string, searchableText: string): boolean {
+  if (searchableText.includes(term)) return true;
+  // A one-character typo is common in recipe names (e.g. "revioles" ->
+  // "ravioles"). Apply fuzzy matching only to reasonably long terms to avoid
+  // turning short searches into unrelated results.
+  if (term.length < 5) return false;
+  const words = new Set(searchableText.split(/[^a-z0-9ñ]+/).filter(Boolean));
+  for (const word of words) {
+    if (Math.abs(word.length - term.length) <= 1 && levenshteinDistance(term, word) <= 1) return true;
+  }
+  return false;
+}
+
 function matchesSearch(video: StoredVideo, query: string): boolean {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return true;
@@ -91,7 +122,7 @@ function matchesSearch(video: StoredVideo, query: string): boolean {
     video.creatorName,
     ...(Array.isArray(video.tags) ? video.tags : []),
   ].join(' '));
-  return terms.every((term) => searchableText.includes(term));
+  return terms.every((term) => termMatchesSearchableText(term, searchableText));
 }
 
 class StoreManager {
