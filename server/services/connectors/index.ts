@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { VideoPlatform } from '../../../src/types';
 import { validateExternalUrl } from '../../security/ssrf';
 import { resolveExternalVideoUrl } from '../resolveExternalVideoUrl';
@@ -25,6 +26,7 @@ const HOSTS = {
   youtube: new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtu.be']),
   instagram: new Set(['instagram.com', 'www.instagram.com', 'm.instagram.com', 'instagr.am']),
   tiktok: new Set(['tiktok.com', 'www.tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com', 'v.tiktok.com']),
+  facebook: new Set(['facebook.com', 'www.facebook.com', 'm.facebook.com']),
 };
 
 function cleanText(value: unknown, fallback: string, max: number): string {
@@ -78,17 +80,13 @@ export class InstagramConnector implements VideoConnector {
 
   async extract(urlStr: string): Promise<ExtractedVideoMetadata> {
     const parsed = new URL(urlStr);
-    // Support standard web (/reel/, /p/, /reels/, /tv/) and mobile share routes (/share/reel/, /share/p/, /username/reel/)
     const match = parsed.pathname.match(/(?:share\/)?(p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i) ||
                   parsed.pathname.match(/\/(p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
     const kind = match?.[1]?.toLowerCase() || '';
     const postId = match?.[2] || '';
     if (!postId) throw new Error('No se pudo extraer un ID de publicación/reel válido de Instagram');
     const embedPath = kind === 'reel' || kind === 'reels' ? 'reel' : 'p';
-    
-    // Default appetizing culinary poster when Instagram doesn't expose direct image asset
     const defaultThumbnail = 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&auto=format&fit=crop&q=80';
-    
     return {
       originalUrl: urlStr,
       embedUrl: `https://www.instagram.com/${embedPath}/${postId}/embed/`,
@@ -122,7 +120,6 @@ export class TikTokConnector implements VideoConnector {
     }
 
     const parsed = new URL(resolvedUrl);
-    // Support /@user/video/123456, /video/123456, /v/123456 or standalone numeric id
     const match = parsed.pathname.match(/(?:video|v)\/(\d+)/) || parsed.pathname.match(/\/(\d{15,25})/);
     const videoId = match?.[1] || '';
     if (!videoId) throw new Error('No se pudo extraer un ID de video válido de TikTok');
@@ -158,12 +155,53 @@ export class TikTokConnector implements VideoConnector {
   }
 }
 
-const connectors: VideoConnector[] = [new YouTubeConnector(), new InstagramConnector(), new TikTokConnector()];
+export class FacebookConnector implements VideoConnector {
+  platform: VideoPlatform = 'FACEBOOK';
+
+  canHandle(url: string): boolean {
+    return HOSTS.facebook.has(new URL(url).hostname.toLowerCase());
+  }
+
+  async extract(urlStr: string): Promise<ExtractedVideoMetadata> {
+    const parsed = new URL(urlStr);
+    const path = parsed.pathname.toLowerCase();
+    const idMatch = parsed.pathname.match(/\/(?:videos?|reel|reels)\/(\d+)/i) ||
+      parsed.pathname.match(/\/(\d{8,})\/?$/);
+    const queryId = parsed.searchParams.get('v') || parsed.searchParams.get('video_id') || '';
+    const platformVideoId = idMatch?.[1] || queryId || createHash('sha256').update(parsed.href).digest('hex').slice(0, 32);
+
+    const isVideoPath = /\/(?:videos?|reel|reels)\//i.test(path) || Boolean(queryId);
+    if (!isVideoPath && !idMatch) {
+      throw new Error('La URL de Facebook no parece ser un video o reel público válido');
+    }
+
+    const embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(parsed.href)}&show_text=false`;
+    const thumbnailUrl = 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&auto=format&fit=crop&q=80';
+
+    return {
+      originalUrl: parsed.href,
+      embedUrl,
+      platform: 'FACEBOOK',
+      platformVideoId,
+      title: 'Video de cocina en Facebook',
+      description: 'Video público de cocina publicado en Facebook. El contenido se reproduce desde Facebook; CociFlash no descarga ni almacena el video.',
+      thumbnailUrl,
+      creatorName: 'Creador de Facebook',
+    };
+  }
+}
+
+const connectors: VideoConnector[] = [
+  new YouTubeConnector(),
+  new InstagramConnector(),
+  new TikTokConnector(),
+  new FacebookConnector(),
+];
 
 export async function processExternalVideoUrl(urlStr: string): Promise<ExtractedVideoMetadata> {
   const validation = validateExternalUrl(urlStr);
   if (!validation.valid || !validation.url) throw new Error(validation.reason || 'URL no permitida por seguridad');
   const connector = connectors.find((connector) => connector.canHandle(validation.url!.href));
-  if (!connector) throw new Error('Plataforma no soportada. Actualmente soportamos YouTube, Instagram y TikTok.');
+  if (!connector) throw new Error('Plataforma no soportada. Actualmente soportamos YouTube, Instagram, TikTok y Facebook.');
   return connector.extract(validation.url.href);
 }
