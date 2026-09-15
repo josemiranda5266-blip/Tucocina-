@@ -71,6 +71,33 @@ function clean<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
+/** Normalizes accents, case and repeated whitespace so searches are forgiving. */
+function normalizeSearchText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function matchesSearch(video: StoredVideo, query: string): boolean {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return true;
+
+  // Match every search term independently. This makes searches such as
+  // "ravioles queso" work even when the exact phrase is not stored.
+  const terms = normalizedQuery.split(' ').filter(Boolean);
+  const searchableText = normalizeSearchText([
+    video.title,
+    video.description,
+    video.creatorName,
+    ...(Array.isArray(video.tags) ? video.tags : []),
+  ].join(' '));
+
+  return terms.every((term) => searchableText.includes(term));
+}
+
 class StoreManager {
   private data: DatabaseSchema = clean(EMPTY_DATA);
   private knownUserCount = 0;
@@ -178,10 +205,7 @@ class StoreManager {
     items = options.status ? items.filter((v) => v.status === options.status) : items.filter((v) => v.status === 'PUBLISHED');
     if (options.categoryId) items = items.filter((v) => v.categoryId === options.categoryId);
     if (options.platform) items = items.filter((v) => v.platform === options.platform!.toUpperCase());
-    if (options.searchQuery) {
-      const q = options.searchQuery.toLowerCase();
-      items = items.filter((v) => v.title.toLowerCase().includes(q) || v.description.toLowerCase().includes(q) || v.creatorName.toLowerCase().includes(q) || (Array.isArray(v.tags) && v.tags.some((t) => t.toLowerCase().includes(q))));
-    }
+    if (options.searchQuery) items = items.filter((v) => matchesSearch(v, options.searchQuery!));
     if (options.sortBy === 'views') items.sort((a, b) => b.views - a.views);
     else items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -258,99 +282,33 @@ class StoreManager {
           markedIds.push(video.id);
           this.persistDoc('videos', video);
         }
-      } else seenMap.set(key, video);
+      } else {
+        seenMap.set(key, video);
+      }
     }
     return { markedCount: markedIds.length, markedIds };
   }
 
-  getCommentsByVideoId(videoId: string): StoredComment[] {
-    return this.data.comments.filter((c) => c.videoId === videoId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-
-  addComment(comment: StoredComment): StoredComment { this.data.comments.unshift(comment); this.persistDoc('comments', comment); return comment; }
-
-  deleteComment(commentId: string, userId: string, isAdmin: boolean): boolean {
-    const idx = this.data.comments.findIndex((c) => c.id === commentId);
-    if (idx === -1) return false;
-    const comment = this.data.comments[idx];
-    if (comment.userId !== userId && !isAdmin) return false;
-    this.data.comments.splice(idx, 1);
-    this.deleteDoc('comments', commentId);
-    return true;
-  }
-
-  incrementViews(id: string): void {
-    const video = this.getVideoById(id);
-    if (!video) return;
-    video.views = (video.views || 0) + 1;
-    this.persistDoc('videos', video);
-  }
-
+  addReport(report: StoredReport): StoredReport { this.data.reports.unshift(report); this.persistDoc('reports', report); return report; }
   getReports(options: { status?: string; cursor?: string; limit?: number }) {
     let items = [...this.data.reports];
     if (options.status) items = items.filter((r) => r.status === options.status);
     items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const limit = options.limit || 20;
-    let startIndex = 0;
-    if (options.cursor) {
-      const idx = items.findIndex((r) => r.id === options.cursor);
-      if (idx !== -1) startIndex = idx + 1;
-    }
+    const startIndex = options.cursor ? Math.max(0, items.findIndex((r) => r.id === options.cursor) + 1) : 0;
     const sliced = items.slice(startIndex, startIndex + limit);
     const hasMore = startIndex + limit < items.length;
     return { items: sliced, limit, hasMore, nextCursor: hasMore && sliced.length ? sliced[sliced.length - 1].id : null, total: items.length };
   }
-
-  addReport(report: StoredReport): StoredReport { this.data.reports.unshift(report); this.persistDoc('reports', report); return report; }
-
-  updateReport(id: string, status: StoredReport['status']): boolean {
-    const report = this.data.reports.find((r) => r.id === id);
-    if (!report) return false;
-    report.status = status;
-    this.persistDoc('reports', report);
-    return true;
-  }
-
-  getFavorites(userId: string, limit = 20, cursor?: string) {
-    const userFavs = this.data.favorites.filter((f) => f.userId === userId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    let startIndex = 0;
-    if (cursor) {
-      const idx = userFavs.findIndex((f) => f.id === cursor);
-      if (idx !== -1) startIndex = idx + 1;
-    }
-    const sliced = userFavs.slice(startIndex, startIndex + limit);
-    const hasMore = startIndex + limit < userFavs.length;
-    const items = sliced.map((f) => this.getVideoById(f.videoId)).filter((v): v is StoredVideo => v !== null && v.status === 'PUBLISHED');
-    return { items, limit, hasMore, nextCursor: hasMore && sliced.length ? sliced[sliced.length - 1].id : null };
-  }
-
+  updateReport(id: string, updates: Partial<StoredReport>): StoredReport | null { const index = this.data.reports.findIndex((r) => r.id === id); if (index === -1) return null; const updated = { ...this.data.reports[index], ...updates }; this.data.reports[index] = updated; this.persistDoc('reports', updated); return updated; }
+  addFavorite(favorite: StoredFavorite): StoredFavorite { this.data.favorites.unshift(favorite); this.persistDoc('favorites', favorite); return favorite; }
+  removeFavorite(userId: string, videoId: string): boolean { const before = this.data.favorites.length; const found = this.data.favorites.find((f) => f.userId === userId && f.videoId === videoId); this.data.favorites = this.data.favorites.filter((f) => !(f.userId === userId && f.videoId === videoId)); if (found) this.deleteDoc('favorites', found.id); return this.data.favorites.length < before; }
   isFavorite(userId: string, videoId: string): boolean { return this.data.favorites.some((f) => f.userId === userId && f.videoId === videoId); }
-
-  addFavorite(userId: string, videoId: string): void {
-    if (this.isFavorite(userId, videoId)) return;
-    const favorite: StoredFavorite = { id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, userId, videoId, createdAt: new Date().toISOString() };
-    this.data.favorites.push(favorite);
-    this.persistDoc('favorites', favorite);
-  }
-
-  removeFavorite(userId: string, videoId: string): void {
-    const removed = this.data.favorites.filter((f) => f.userId === userId && f.videoId === videoId);
-    this.data.favorites = this.data.favorites.filter((f) => !(f.userId === userId && f.videoId === videoId));
-    for (const favorite of removed) this.deleteDoc('favorites', favorite.id);
-  }
-
-  getMetrics() {
-    const totalVideos = this.data.videos.length;
-    return {
-      totalVideos,
-      publishedVideos: this.data.videos.filter((v) => v.status === 'PUBLISHED').length,
-      pendingVideos: this.data.videos.filter((v) => v.status === 'PENDING_REVIEW' || v.status === 'DRAFT').length,
-      hiddenVideos: this.data.videos.filter((v) => v.status === 'HIDDEN' || v.status === 'REJECTED').length,
-      openReports: this.data.reports.filter((r) => r.status === 'OPEN').length,
-      totalUsers: this.knownUserCount,
-    };
-  }
+  getFavorites(userId: string): StoredFavorite[] { return this.data.favorites.filter((f) => f.userId === userId); }
+  addComment(comment: StoredComment): StoredComment { this.data.comments.push(comment); this.persistDoc('comments', comment); return comment; }
+  getComments(videoId: string): StoredComment[] { return this.data.comments.filter((c) => c.videoId === videoId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()); }
+  deleteComment(id: string): boolean { const before = this.data.comments.length; this.data.comments = this.data.comments.filter((c) => c.id !== id); if (this.data.comments.length < before) this.deleteDoc('comments', id); return this.data.comments.length < before; }
+  getMetrics() { return { videos: this.data.videos.length, publishedVideos: this.data.videos.filter((v) => v.status === 'PUBLISHED').length, pendingVideos: this.data.videos.filter((v) => v.status === 'PENDING_REVIEW').length, draftVideos: this.data.videos.filter((v) => v.status === 'DRAFT').length, users: this.knownUserCount, reports: this.data.reports.filter((r) => r.status === 'OPEN').length, favorites: this.data.favorites.length, comments: this.data.comments.length }; }
 }
 
 export const dbStore = new StoreManager();
-export const storeReady = dbStore.ready;
