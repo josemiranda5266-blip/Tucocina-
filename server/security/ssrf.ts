@@ -16,6 +16,9 @@ export const ALLOWED_VIDEO_DOMAINS = [
   'vm.tiktok.com',
   'vt.tiktok.com',
   'v.tiktok.com',
+  'facebook.com',
+  'www.facebook.com',
+  'm.facebook.com',
 ] as const;
 
 const PRIVATE_IP_PATTERNS = [
@@ -71,7 +74,7 @@ export function validateExternalUrl(urlString: string): { valid: boolean; reason
   if (!isAllowedHostname(hostname)) {
     return {
       valid: false,
-      reason: `El dominio '${hostname}' no está en la lista de plataformas permitidas (YouTube, Instagram, TikTok)`,
+      reason: `El dominio '${hostname}' no está en la lista de plataformas permitidas (YouTube, Instagram, TikTok, Facebook)`,
     };
   }
 
