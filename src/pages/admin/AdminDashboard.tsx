@@ -1,11 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
-import { Activity, Eye, Film, Users, Search, Heart, Share2, Smartphone, Monitor, Tablet } from 'lucide-react';
+import { Activity, Eye, Film, Users, Search, Heart, Share2, Smartphone, Monitor, Tablet, MousePointerClick, PlayCircle, ExternalLink, AlertCircle } from 'lucide-react';
 
 const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: number }> = ({ icon, label, value }) => (
   <div className="bg-white p-5 rounded-2xl border border-stone-200/80 shadow-sm flex items-center gap-4">
     <div className="p-3 bg-stone-100 text-stone-800 rounded-xl">{icon}</div>
     <div><p className="text-xs font-semibold text-stone-500 uppercase tracking-wider">{label}</p><p className="text-2xl font-extrabold text-stone-900">{value.toLocaleString('es-AR')}</p></div>
+  </div>
+);
+
+const FunnelStep: React.FC<{ label: string; value: number; rate?: number; icon: React.ReactNode }> = ({ label, value, rate, icon }) => (
+  <div className="flex items-center justify-between gap-4 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
+    <div className="flex items-center gap-3 min-w-0"><div className="text-amber-700 shrink-0">{icon}</div><span className="text-sm font-medium text-stone-700 truncate">{label}</span></div>
+    <div className="text-right shrink-0"><strong className="text-stone-900">{value.toLocaleString('es-AR')}</strong>{rate !== undefined && <span className="ml-2 text-xs text-stone-500">{Math.round(rate * 100)}%</span>}</div>
   </div>
 );
 
@@ -21,9 +28,8 @@ export const AdminDashboard: React.FC = () => {
       const [system, behavior] = await Promise.all([api.adminGetMetrics(), api.adminGetAnalytics(period)]);
       setMetrics(system);
       setAnalytics(behavior);
-    } catch (err) {
-      console.error('Error al cargar métricas:', err);
-    } finally { setLoading(false); }
+    } catch (err) { console.error('Error al cargar métricas:', err); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { void load(days); }, [days]);
@@ -31,6 +37,7 @@ export const AdminDashboard: React.FC = () => {
   if (loading && !metrics) return <div className="py-12 text-center text-stone-500"><div className="w-8 h-8 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" /><p className="text-sm font-medium">Cargando estadísticas del sistema...</p></div>;
 
   const totals = analytics?.totals || {};
+  const funnel = analytics?.funnel || {};
   const deviceIcon = (id: string) => id === 'mobile' ? <Smartphone className="w-4 h-4" /> : id === 'tablet' ? <Tablet className="w-4 h-4" /> : <Monitor className="w-4 h-4" />;
 
   return (
@@ -60,6 +67,18 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </section>
 
+      <section className="bg-white rounded-2xl border border-stone-200 p-5">
+        <div className="flex items-center justify-between gap-3 mb-4"><div><h3 className="font-bold text-stone-900">Embudo de consumo</h3><p className="text-xs text-stone-500 mt-1">Mide dónde se pierde el usuario desde la búsqueda hasta el contenido original.</p></div><Activity className="w-5 h-5 text-amber-600" /></div>
+        <div className="grid md:grid-cols-2 gap-3">
+          <FunnelStep label="Búsquedas" value={totals.searches || 0} icon={<Search className="w-4 h-4" />} />
+          <FunnelStep label="Clics en resultados" value={totals.searchResultClicks || 0} rate={funnel.searchToResultClickRate} icon={<MousePointerClick className="w-4 h-4" />} />
+          <FunnelStep label="Videos abiertos" value={totals.videoViews || 0} rate={funnel.resultClickToVideoOpenRate} icon={<Eye className="w-4 h-4" />} />
+          <FunnelStep label="Reproducciones reales" value={totals.videoPlays || 0} rate={funnel.videoOpenToPlayRate} icon={<PlayCircle className="w-4 h-4" />} />
+          <FunnelStep label="Salidas al contenido original" value={totals.externalOpens || 0} rate={funnel.playToExternalRate} icon={<ExternalLink className="w-4 h-4" />} />
+          <FunnelStep label="Búsquedas sin resultados" value={totals.searchNoResults || 0} rate={funnel.noResultsRate} icon={<AlertCircle className="w-4 h-4" />} />
+        </div>
+      </section>
+
       <section className="grid lg:grid-cols-3 gap-5">
         <div className="bg-white rounded-2xl border border-stone-200 p-5"><h3 className="font-bold mb-4">Procedencia disponible</h3><div className="space-y-2">{(analytics?.countries || []).slice(0, 8).map((item: any) => <div key={item.id} className="flex justify-between text-sm"><span>{item.id === 'UNKNOWN' ? 'No disponible' : item.id}</span><strong>{item.count.toLocaleString('es-AR')}</strong></div>)}{(!analytics?.countries?.length) && <p className="text-sm text-stone-500">Todavía no hay datos.</p>}</div></div>
         <div className="bg-white rounded-2xl border border-stone-200 p-5"><h3 className="font-bold mb-4">Dispositivos</h3><div className="space-y-3">{(analytics?.devices || []).slice(0, 5).map((item: any) => <div key={item.id} className="flex items-center justify-between text-sm"><span className="flex items-center gap-2">{deviceIcon(item.id)}{item.id}</span><strong>{item.count.toLocaleString('es-AR')}</strong></div>)}</div></div>
@@ -68,7 +87,7 @@ export const AdminDashboard: React.FC = () => {
 
       <section className="grid lg:grid-cols-2 gap-5">
         <div className="bg-white rounded-2xl border border-stone-200 p-5"><h3 className="font-bold mb-4">Búsquedas más realizadas</h3>{analytics?.topSearches?.length ? <div className="space-y-2">{analytics.topSearches.map((item: any, index: number) => <div key={`${item.query}-${index}`} className="flex justify-between gap-4 text-sm"><span className="truncate">{index + 1}. {item.query}</span><strong>{item.count}</strong></div>)}</div> : <p className="text-sm text-stone-500">Aún no hay búsquedas registradas.</p>}</div>
-        <div className="bg-white rounded-2xl border border-stone-200 p-5"><h3 className="font-bold mb-4">Videos con más interacciones</h3>{analytics?.topVideos?.length ? <div className="space-y-3">{analytics.topVideos.map((item: any, index: number) => <div key={`${item.id}-${index}`} className="flex items-center justify-between gap-4 text-sm"><div className="min-w-0"><p className="font-medium text-stone-900 truncate">{index + 1}. {item.title}</p><p className="text-xs text-stone-500 truncate">{item.platform ? `${item.platform} · ` : ''}{item.creatorName || 'Creador no disponible'} · ID: {item.id}</p></div><strong className="shrink-0">{item.count.toLocaleString('es-AR')}</strong></div>)}</div> : <p className="text-sm text-stone-500">Aún no hay interacciones registradas.</p>}</div>
+        <div className="bg-white rounded-2xl border border-stone-200 p-5"><h3 className="font-bold mb-4">Videos con más interacciones</h3>{analytics?.topVideos?.length ? <div className="space-y-3">{analytics.topVideos.map((item: any, index: number) => <div key={`${item.id}-${index}`} className="flex items-center justify-between gap-4 text-sm"><div className="min-w-0"><p className="font-medium text-stone-900 truncate">{index + 1}. {item.title}</p><p className="text-xs text-stone-500 truncate">{item.platform ? `${item.platform} · ` : ''}{item.creatorName || 'Creador no disponible'}</p></div><strong className="shrink-0">{item.opens + item.plays + item.externalOpens}</strong></div>)}</div> : <p className="text-sm text-stone-500">Aún no hay interacciones registradas.</p>}</div>
       </section>
     </div>
   );
