@@ -40,8 +40,8 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
     for (let offset = days - 1; offset >= 0; offset -= 1) {
       const date = dateKey(offset);
       const doc = db.collection('analytics_daily').doc(date);
-      const [eventRows, videoRows, searchRows, visitorSnap, sessionSnap] = await Promise.all([
-        readCounts(doc, 'events'), readCounts(doc, 'videos'), readCounts(doc, 'searches'), doc.collection('visitors').get(), doc.collection('sessions').get(),
+      const [eventRows, interactionRows, searchRows, visitorSnap, sessionSnap] = await Promise.all([
+        readCounts(doc, 'events'), readCounts(doc, 'video_interactions'), readCounts(doc, 'searches'), doc.collection('visitors').get(), doc.collection('sessions').get(),
       ]);
       const eventMap = new Map(eventRows.map((row: any) => [row.id, Number(row.count || 0)]));
       const dayPageViews = eventMap.get('page_view') || 0;
@@ -70,16 +70,18 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
       });
       sessionSnap.docs.forEach((sessionDoc) => uniqueSessions.add(sessionDoc.id));
 
-      for (const row of videoRows as any[]) {
-        const catalog = videoCatalog.get(row.id);
-        const previous = videos.get(row.id) || { id: row.id, title: catalog?.title || 'Video no encontrado', creatorName: catalog?.creatorName, platform: catalog?.platform, opens: 0, plays: 0, externalOpens: 0, favorites: 0, shares: 0 };
+      for (const row of interactionRows as any[]) {
+        const videoId = typeof row.videoId === 'string' ? row.videoId : '';
+        if (!videoId) continue;
+        const catalog = videoCatalog.get(videoId);
+        const previous = videos.get(videoId) || { id: videoId, title: catalog?.title || 'Video no encontrado', creatorName: catalog?.creatorName, platform: catalog?.platform, opens: 0, plays: 0, externalOpens: 0, favorites: 0, shares: 0 };
         const count = Number(row.count || 0);
-        if (row.lastEvent === 'view_video') previous.opens += count;
-        if (row.lastEvent === 'video_play') previous.plays += count;
-        if (row.lastEvent === 'video_open_external') previous.externalOpens += count;
-        if (row.lastEvent === 'favorite_add') previous.favorites += count;
-        if (row.lastEvent === 'share_video') previous.shares += count;
-        videos.set(row.id, previous);
+        if (row.event === 'view_video') previous.opens += count;
+        if (row.event === 'video_play') previous.plays += count;
+        if (row.event === 'video_open_external') previous.externalOpens += count;
+        if (row.event === 'favorite_add') previous.favorites += count;
+        if (row.event === 'share_video') previous.shares += count;
+        videos.set(videoId, previous);
       }
       for (const row of searchRows as any[]) {
         const previous = searchTerms.get(row.id);
@@ -100,11 +102,11 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
       periodDays: days,
       totals: { visitors: uniqueVisitors.size, sessions: uniqueSessions.size, pageViews, videoViews, videoPlays, searches, searchResultClicks, searchNoResults, favorites, shares, signUps, logins, externalOpens },
       funnel: {
-        searchToResultClickRate: searches ? searchResultClicks / searches : 0,
-        resultClickToVideoOpenRate: searchResultClicks ? videoViews / searchResultClicks : 0,
-        videoOpenToPlayRate: videoViews ? videoPlays / videoViews : 0,
-        playToExternalRate: videoPlays ? externalOpens / videoPlays : 0,
-        noResultsRate: searches ? searchNoResults / searches : 0,
+        searchToResultClickRate: searches ? Math.min(1, searchResultClicks / searches) : 0,
+        resultClickToVideoOpenRate: searchResultClicks ? Math.min(1, videoViews / searchResultClicks) : 0,
+        videoOpenToPlayRate: videoViews ? Math.min(1, videoPlays / videoViews) : 0,
+        playToExternalRate: videoPlays ? Math.min(1, externalOpens / videoPlays) : 0,
+        noResultsRate: searches ? Math.min(1, searchNoResults / searches) : 0,
       },
       daily,
       countries: sortMap(countries),
