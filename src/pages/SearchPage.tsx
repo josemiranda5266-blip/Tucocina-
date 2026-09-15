@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SearchBar } from '../components/SearchBar';
 import { FilterBar } from '../components/FilterBar';
 import { VideoGrid } from '../components/VideoGrid';
@@ -25,8 +25,20 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [pageCursors, setPageCursors] = useState<Record<number, string>>({});
+  const initialSearchTracked = useRef(false);
 
   useEffect(() => { api.getCategories().then(setCategories).catch(() => setCategories([])); }, []);
+
+  // A page load with a real query is a search intent; loading another page,
+  // changing sort, or applying a category is not another text search.
+  useEffect(() => {
+    if (initialSearchTracked.current) return;
+    const query = parsedSearch.trim();
+    if (query) {
+      initialSearchTracked.current = true;
+      track('search_performed', { query });
+    }
+  }, [parsedSearch]);
 
   useEffect(() => {
     let active = true;
@@ -37,8 +49,9 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
         if (!active) return;
         setVideos(res.items);
         setHasMore(res.hasMore);
-        track('search_performed', { query: searchQuery || (selectedCategory ? `cat:${selectedCategory}` : 'all') });
-        if (!res.items.length && (searchQuery || selectedCategory)) track('search_no_results', { query: searchQuery || `cat:${selectedCategory}` });
+        if (!res.items.length && (searchQuery.trim() || selectedCategory)) {
+          track('search_no_results', { query: searchQuery.trim() || `cat:${selectedCategory}` });
+        }
         if (res.nextCursor) setPageCursors((previous) => previous[currentPage + 1] === res.nextCursor ? previous : { ...previous, [currentPage + 1]: res.nextCursor! });
       })
       .catch((err) => { if (!active) return; setVideos([]); setHasMore(false); setError(err instanceof Error ? err.message : 'No se pudo cargar el catálogo.'); track('search_error', { query: searchQuery }); })
@@ -48,12 +61,12 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
 
   const resetPagination = () => { setCurrentPage(1); setPageCursors({}); };
   const handleSearch = (q: string) => {
-    setSearchQuery(q);
-    // A text search is intentionally global. This prevents an old category or
-    // platform selection from hiding a video that clearly matches its title.
-    if (q.trim()) {
+    const normalizedQuery = q.trim().replace(/\s+/g, ' ');
+    setSearchQuery(normalizedQuery);
+    if (normalizedQuery) {
       setSelectedCategory('');
       setSelectedPlatform('');
+      track('search_performed', { query: normalizedQuery });
     }
     resetPagination();
   };
