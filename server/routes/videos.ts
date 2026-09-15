@@ -113,8 +113,19 @@ router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest,
 // DELETE /api/videos/:id/comments/:commentId - Delete a comment (author or admin)
 router.delete('/:id/comments/:commentId', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { commentId } = req.params;
-    const deleted = dbStore.deleteComment(commentId);
+    const { id: videoId, commentId } = req.params;
+    const video = dbStore.getVideoById(videoId);
+    if (!video) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
+    }
+
+    const userId = req.user?.uid;
+    if (!userId) {
+      return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Autenticación requerida' } });
+    }
+
+    const isAdmin = req.user?.role === 'ADMIN' || req.user?.admin === true;
+    const deleted = dbStore.deleteComment(commentId, userId, isAdmin);
     if (!deleted) {
       return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No tienes permisos para eliminar este comentario o no fue encontrado.' } });
     }
