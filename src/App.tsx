@@ -16,6 +16,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminVideos } from './pages/admin/AdminVideos';
 import { AdminImportVideo } from './pages/admin/AdminImportVideo';
 import { AdminReports } from './pages/admin/AdminReports';
+import { QuickVideoManager } from './components/admin/QuickVideoManager';
 import { Video } from './types';
 import { track, trackPageView, trackSessionStart } from './services/analytics';
 
@@ -76,7 +77,7 @@ export const AppContent: React.FC = () => {
   const handleAdminTabChange = (tab: 'dashboard' | 'videos' | 'import' | 'reports') => { setAdminTab(tab); handleNavigate('admin', tab === 'dashboard' ? '' : tab); };
 
   const renderView = () => {
-    if (location.view === 'admin') return <AdminLayout currentAdminTab={adminTab} onTabChange={handleAdminTabChange}>{adminTab === 'dashboard' && <AdminDashboard />}{adminTab === 'videos' && <AdminVideos />}{adminTab === 'import' && <AdminImportVideo onVideoSelect={handleVideoSelect} />}{adminTab === 'reports' && <AdminReports />}</AdminLayout>;
+    if (location.view === 'admin') return <AdminLayout currentAdminTab={adminTab} onTabChange={handleAdminTabChange}>{adminTab === 'dashboard' && <><AdminDashboard /><QuickVideoManager /></>}{adminTab === 'videos' && <AdminVideos />}{adminTab === 'import' && <AdminImportVideo onVideoSelect={handleVideoSelect} />}{adminTab === 'reports' && <AdminReports />}</AdminLayout>;
     if (location.view === 'legal') { const validSections: LegalSection[] = ['privacy', 'terms', 'cookies', 'content']; const section = validSections.includes(location.param as LegalSection) ? location.param as LegalSection : 'privacy'; return <LegalPage section={section} onNavigate={handleNavigate} />; }
     if (location.view === 'contact') return <ContactPage onNavigate={handleNavigate} />;
     switch (location.view) {
