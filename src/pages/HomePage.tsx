@@ -74,51 +74,34 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
 
     setPopularLoading(true);
     try {
-      let cursor = popularCursors[targetPage];
+      const cursors = { ...popularCursors };
 
-      // Cursor pagination is sequential. If the user jumps directly to page 4,
-      // resolve the missing cursors first without making the UI depend on them.
+      // The API uses cursor pagination. Resolve any missing cursor chain locally,
+      // then request the target page exactly once.
       for (let page = 2; page <= targetPage; page += 1) {
-        const knownCursor = popularCursors[page];
-        if (knownCursor !== undefined) {
-          cursor = knownCursor;
-          continue;
-        }
+        if (cursors[page] !== undefined) continue;
 
-        const previousCursor = popularCursors[page - 1];
+        const previousCursor = cursors[page - 1];
         const result = await api.getVideos({
           limit: POPULAR_PAGE_SIZE,
           sortBy: 'views',
           ...(previousCursor ? { cursor: previousCursor } : {}),
         });
-        setPopularCursors((current) => ({ ...current, [page]: result.nextCursor }));
-        cursor = result.nextCursor;
+        cursors[page] = result.nextCursor;
       }
 
+      const pageCursor = cursors[targetPage];
       const result = await api.getVideos({
         limit: POPULAR_PAGE_SIZE,
         sortBy: 'views',
-        ...(cursor ? { cursor } : {}),
+        ...(pageCursor ? { cursor: pageCursor } : {}),
       });
 
-      // When targetPage was resolved above, cursor points to the end of that
-      // page. Fetching targetPage again would skip it, so use the page-1 cursor.
-      const pageStartCursor = targetPage === 1 ? null : popularCursors[targetPage - 1];
-      const finalResult = targetPage === 1
-        ? result
-        : await api.getVideos({
-            limit: POPULAR_PAGE_SIZE,
-            sortBy: 'views',
-            ...(pageStartCursor ? { cursor: pageStartCursor } : {}),
-          });
-
-      setPopularVideos(finalResult.items);
+      cursors[targetPage + 1] = result.nextCursor;
+      setPopularCursors(cursors);
+      setPopularVideos(result.items);
       setPopularPage(targetPage);
-      setPopularTotal(finalResult.total);
-      setPopularCursors((current) => ({
-        ...current,
-        [targetPage + 1]: finalResult.nextCursor,
-      }));
+      setPopularTotal(result.total);
       window.setTimeout(() => document.getElementById('home-popular')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
     } catch (err) {
       console.error('Error al cambiar de página de recetas populares:', err);
