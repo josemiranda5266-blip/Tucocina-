@@ -34,19 +34,32 @@ app.use((_req, res, next) => {
 });
 
 app.use((req, res, next) => {
-  const envOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(origin => origin.trim()).filter(Boolean);
+  const envOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
+  const configuredOrigins = new Set(envOrigins);
   const origin = req.headers.origin;
-  const host = req.headers.host;
-  let isAllowed = true;
+  const host = req.headers.host?.split(':')[0]?.toLowerCase();
 
   if (origin) {
+    let parsedOrigin: URL;
     try {
-      const originHost = new URL(origin).host;
-      isAllowed = envOrigins.length === 0 || envOrigins.includes('*') || envOrigins.includes(origin) || originHost === host || originHost.endsWith('.run.app') || originHost.includes('localhost');
+      parsedOrigin = new URL(origin);
     } catch {
-      isAllowed = true;
+      return res.status(403).json({ error: { code: 'CORS_ORIGIN_DENIED', message: 'Origen no permitido.' } });
     }
-    if (!isAllowed) return res.status(403).json({ error: { code: 'CORS_ORIGIN_DENIED', message: 'Origen no permitido.' } });
+
+    const originHost = parsedOrigin.hostname.toLowerCase();
+    const isConfigured = configuredOrigins.has(origin);
+    const isSameHost = !isProduction && originHost === host;
+    const isDevelopmentOrigin = !isProduction && (originHost === 'localhost' || originHost === '127.0.0.1');
+    const isAllowed = isConfigured || isSameHost || isDevelopmentOrigin;
+
+    if (!isAllowed) {
+      return res.status(403).json({ error: { code: 'CORS_ORIGIN_DENIED', message: 'Origen no permitido.' } });
+    }
+
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
   }
