@@ -33,6 +33,18 @@ function cleanText(value: unknown, fallback: string, max: number): string {
   return typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : fallback;
 }
 
+function isSafeFacebookImageUrl(value?: string): value is string {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'https:') return false;
+    const host = parsed.hostname.toLowerCase();
+    return host === 'facebook.com' || host.endsWith('.facebook.com') || host.endsWith('.fbcdn.net') || host.endsWith('.fbsbx.com');
+  } catch {
+    return false;
+  }
+}
+
 export class YouTubeConnector implements VideoConnector {
   platform: VideoPlatform = 'YOUTUBE';
 
@@ -185,10 +197,11 @@ async function fetchFacebookMetadata(url: string): Promise<{ title?: string; des
       };
 
       const decode = (value?: string) => value?.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+      const thumbnailUrl = decode(getMeta('og:image')) || decode(getMeta('twitter:image'));
       return {
         title: decode(getMeta('og:title')),
         description: decode(getMeta('og:description')),
-        thumbnailUrl: decode(getMeta('og:image')),
+        thumbnailUrl: isSafeFacebookImageUrl(thumbnailUrl) ? thumbnailUrl : undefined,
         creatorName: decode(getMeta('og:site_name')),
       };
     } catch {
@@ -220,7 +233,6 @@ export class FacebookConnector implements VideoConnector {
     }
 
     const embedUrl = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(parsed.href)}&show_text=false`;
-    const fallbackThumbnail = 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&auto=format&fit=crop&q=80';
     const metadata = await fetchFacebookMetadata(parsed.href);
 
     return {
@@ -230,7 +242,7 @@ export class FacebookConnector implements VideoConnector {
       platformVideoId,
       title: cleanText(metadata.title, 'Video de cocina en Facebook', 300),
       description: cleanText(metadata.description, 'Video público de cocina publicado en Facebook. El contenido se reproduce desde Facebook; CociFlash no descarga ni almacena el video.', 1000),
-      thumbnailUrl: metadata.thumbnailUrl || fallbackThumbnail,
+      thumbnailUrl: metadata.thumbnailUrl || '',
       creatorName: cleanText(metadata.creatorName, 'Creador de Facebook', 150),
     };
   }
