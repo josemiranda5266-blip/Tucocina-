@@ -31,14 +31,12 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
     });
 
     const daily: Array<Record<string, any>> = [];
-    let pageViews = 0, videoViews = 0, videoPlays = 0, searches = 0, favorites = 0, shares = 0, signUps = 0, logins = 0;
+    let pageViews = 0, videoViews = 0, videoPlays = 0, searches = 0, searchResultClicks = 0, searchNoResults = 0, favorites = 0, shares = 0, signUps = 0, logins = 0, externalOpens = 0;
     const uniqueVisitors = new Map<string, { country: string; device: string }>();
     const uniqueSessions = new Set<string>();
-    const videos = new Map<string, { id: string; title: string; creatorName?: string; platform?: string; count: number }>();
+    const videos = new Map<string, { id: string; title: string; creatorName?: string; platform?: string; opens: number; plays: number; externalOpens: number; favorites: number; shares: number }>();
     const searchTerms = new Map<string, { query: string; count: number }>();
 
-    // Iterate oldest -> newest so a returning visitor is counted once for the
-    // selected period while their latest country/device attribution wins.
     for (let offset = days - 1; offset >= 0; offset -= 1) {
       const date = dateKey(offset);
       const doc = db.collection('analytics_daily').doc(date);
@@ -49,15 +47,22 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
       const dayPageViews = eventMap.get('page_view') || 0;
       const dayVideoViews = eventMap.get('view_video') || 0;
       const daySearches = eventMap.get('search_performed') || 0;
+      const daySearchResultClicks = eventMap.get('search_result_click') || 0;
+      const daySearchNoResults = eventMap.get('search_no_results') || 0;
       const dayFavorites = eventMap.get('favorite_add') || 0;
+      const dayVideoPlays = eventMap.get('video_play') || 0;
+      const dayExternalOpens = eventMap.get('video_open_external') || 0;
       pageViews += dayPageViews;
       videoViews += dayVideoViews;
-      videoPlays += eventMap.get('video_play') || 0;
+      videoPlays += dayVideoPlays;
       searches += daySearches;
+      searchResultClicks += daySearchResultClicks;
+      searchNoResults += daySearchNoResults;
       favorites += dayFavorites;
       shares += eventMap.get('share_video') || 0;
       signUps += eventMap.get('sign_up') || 0;
       logins += eventMap.get('login') || 0;
+      externalOpens += dayExternalOpens;
 
       visitorSnap.docs.forEach((visitorDoc) => {
         const data = visitorDoc.data() as { country?: string; device?: string };
@@ -67,20 +72,20 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
 
       for (const row of videoRows as any[]) {
         const catalog = videoCatalog.get(row.id);
-        const previous = videos.get(row.id);
-        videos.set(row.id, {
-          id: row.id,
-          title: catalog?.title || 'Video no encontrado',
-          creatorName: catalog?.creatorName,
-          platform: catalog?.platform,
-          count: (previous?.count || 0) + Number(row.count || 0),
-        });
+        const previous = videos.get(row.id) || { id: row.id, title: catalog?.title || 'Video no encontrado', creatorName: catalog?.creatorName, platform: catalog?.platform, opens: 0, plays: 0, externalOpens: 0, favorites: 0, shares: 0 };
+        const count = Number(row.count || 0);
+        if (row.lastEvent === 'view_video') previous.opens += count;
+        if (row.lastEvent === 'video_play') previous.plays += count;
+        if (row.lastEvent === 'video_open_external') previous.externalOpens += count;
+        if (row.lastEvent === 'favorite_add') previous.favorites += count;
+        if (row.lastEvent === 'share_video') previous.shares += count;
+        videos.set(row.id, previous);
       }
       for (const row of searchRows as any[]) {
         const previous = searchTerms.get(row.id);
         searchTerms.set(row.id, { query: row.query || row.id, count: (previous?.count || 0) + Number(row.count || 0) });
       }
-      daily.push({ date, visitors: visitorSnap.size, sessions: sessionSnap.size, pageViews: dayPageViews, videoViews: dayVideoViews, searches: daySearches, favorites: dayFavorites });
+      daily.push({ date, visitors: visitorSnap.size, sessions: sessionSnap.size, pageViews: dayPageViews, videoViews: dayVideoViews, searches: daySearches, searchResultClicks: daySearchResultClicks, searchNoResults: daySearchNoResults, videoPlays: dayVideoPlays, favorites: dayFavorites, externalOpens: dayExternalOpens });
     }
 
     const countries = new Map<string, number>();
@@ -93,11 +98,18 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
 
     return res.json({
       periodDays: days,
-      totals: { visitors: uniqueVisitors.size, sessions: uniqueSessions.size, pageViews, videoViews, videoPlays, searches, favorites, shares, signUps, logins },
+      totals: { visitors: uniqueVisitors.size, sessions: uniqueSessions.size, pageViews, videoViews, videoPlays, searches, searchResultClicks, searchNoResults, favorites, shares, signUps, logins, externalOpens },
+      funnel: {
+        searchToResultClickRate: searches ? searchResultClicks / searches : 0,
+        resultClickToVideoOpenRate: searchResultClicks ? videoViews / searchResultClicks : 0,
+        videoOpenToPlayRate: videoViews ? videoPlays / videoViews : 0,
+        playToExternalRate: videoPlays ? externalOpens / videoPlays : 0,
+        noResultsRate: searches ? searchNoResults / searches : 0,
+      },
       daily,
       countries: sortMap(countries),
       devices: sortMap(devices),
-      topVideos: [...videos.values()].sort((a, b) => b.count - a.count).slice(0, 10),
+      topVideos: [...videos.values()].sort((a, b) => (b.plays + b.opens + b.externalOpens) - (a.plays + a.opens + a.externalOpens)).slice(0, 10),
       topSearches: [...searchTerms.values()].sort((a, b) => b.count - a.count).slice(0, 10),
     });
   } catch (error) {
