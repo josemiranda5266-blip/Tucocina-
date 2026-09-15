@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '../auth/firebaseAdmin';
+import { createRateLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -9,6 +10,8 @@ const EVENT_NAMES = new Set([
   'view_category', 'view_video', 'video_play', 'video_open_external', 'favorite_add', 'favorite_remove',
   'share_video', 'sign_up', 'login', 'logout', 'video_load_error', 'search_error', 'api_error',
 ]);
+
+const analyticsLimiter = createRateLimiter(60 * 1000, 60);
 
 function dayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -32,7 +35,7 @@ function countryFromHeaders(headers: Record<string, unknown>): string {
   return clean(value, 2)?.toUpperCase() || 'UNKNOWN';
 }
 
-router.post('/event', async (req, res) => {
+router.post('/event', analyticsLimiter, async (req, res) => {
   const event = clean(req.body?.event, 40);
   if (!event || !EVENT_NAMES.has(event)) {
     return res.status(400).json({ error: { code: 'INVALID_EVENT', message: 'Evento de analítica no permitido.' } });
