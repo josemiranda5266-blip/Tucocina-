@@ -8,7 +8,7 @@ export interface StoredVideo {
   description: string;
   originalUrl: string;
   embedUrl: string;
-  platform: 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK' | 'OTHER';
+  platform: 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK' | 'FACEBOOK' | 'OTHER';
   platformVideoId: string;
   thumbnailUrl: string;
   creatorName: string;
