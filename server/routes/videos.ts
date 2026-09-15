@@ -30,7 +30,7 @@ router.get('/', async (req: Request, res: Response) => {
     });
 
     return res.json(result);
-  } catch (error: any) {
+  } catch {
     return res.status(500).json({ error: { code: 'FETCH_ERROR', message: 'Error al consultar el catálogo de videos' } });
   }
 });
@@ -45,12 +45,9 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     }
 
-    // Do not block playback on a live origin probe. The catalog already contains
-    // the published URL; temporary API/oEmbed failures must not turn a valid
-    // catalog entry into a 404 or delete it from Firestore.
-    // View counting is intentionally handled separately until the store exposes
-    // a persistence-safe increment operation.
-
+    // Do not block playback on a live origin probe. Temporary API/oEmbed failures
+    // must not turn a valid catalog entry into a 404 or delete it from Firestore.
+    // View counting is handled separately until the store exposes a safe increment.
     return res.json(video);
   } catch {
     return res.status(500).json({ error: { code: 'FETCH_ERROR', message: 'Error al obtener los detalles del video' } });
@@ -66,7 +63,7 @@ router.get('/:id/comments', async (req: Request, res: Response) => {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     }
 
-    const comments = dbStore.getCommentsByVideoId(videoId);
+    const comments = dbStore.getComments(videoId);
     return res.json({ comments });
   } catch {
     return res.status(500).json({ error: { code: 'COMMENTS_FETCH_ERROR', message: 'Error al obtener comentarios' } });
@@ -117,10 +114,7 @@ router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest,
 router.delete('/:id/comments/:commentId', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { commentId } = req.params;
-    const userId = req.user?.uid || '';
-    const isAdmin = req.user?.admin === true || req.user?.role === 'ADMIN' || req.user?.email === 'cristianbravo5266@gmail.com';
-
-    const deleted = dbStore.deleteComment(commentId, userId, isAdmin);
+    const deleted = dbStore.deleteComment(commentId);
     if (!deleted) {
       return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No tienes permisos para eliminar este comentario o no fue encontrado.' } });
     }
