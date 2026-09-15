@@ -16,12 +16,16 @@ const ALLOWED_ORIGINAL_HOSTS = new Set([
   'vm.tiktok.com',
   'vt.tiktok.com',
   'v.tiktok.com',
+  'facebook.com',
+  'www.facebook.com',
+  'm.facebook.com',
 ]);
 
 const EMBED_HOSTS: Record<VideoPlatform, Set<string>> = {
   YOUTUBE: new Set(['www.youtube-nocookie.com']),
   INSTAGRAM: new Set(['www.instagram.com']),
   TIKTOK: new Set(['www.tiktok.com']),
+  FACEBOOK: new Set(['www.facebook.com']),
   OTHER: new Set([]),
 };
 
@@ -45,6 +49,11 @@ export function getSafeEmbedUrl(url: string, platform: VideoPlatform): string | 
     if (platform === 'YOUTUBE' && !/^\/embed\/[a-zA-Z0-9_-]{11}\/?$/.test(parsed.pathname)) return null;
     if (platform === 'INSTAGRAM' && !/^\/(?:p|reel|reels|tv)\/[a-zA-Z0-9_-]+\/embed\/?$/.test(parsed.pathname)) return null;
     if (platform === 'TIKTOK' && !/^\/embed\/v2\/\d+\/?$/.test(parsed.pathname)) return null;
+    if (platform === 'FACEBOOK') {
+      if (parsed.pathname !== '/plugins/video.php') return null;
+      const href = parsed.searchParams.get('href');
+      if (!href || getSafeOriginalUrl(href) === null) return null;
+    }
 
     return parsed.href;
   } catch {

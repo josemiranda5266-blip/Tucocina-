@@ -16,7 +16,6 @@ function requirePublishedVideo(videoId: string) {
   return video && video.status === 'PUBLISHED' ? video : null;
 }
 
-// GET /api/videos - Public catalog
 router.get('/', async (req: Request, res: Response) => {
   try {
     const limit = parseLimit(req.query.limit);
@@ -26,6 +25,10 @@ router.get('/', async (req: Request, res: Response) => {
     const sortBy = req.query.sortBy === 'views' ? 'views' : 'recent';
     const cursor = typeof req.query.cursor === 'string' ? req.query.cursor.trim() : '';
 
+    if (cursor && !dbStore.getVideoById(cursor)) {
+      return res.status(400).json({ error: { code: 'INVALID_CURSOR', message: 'El cursor de paginación no es válido.' } });
+    }
+
     const result = dbStore.getVideos({ categoryId: categoryId || undefined, platform: platform || undefined, searchQuery: searchQuery || undefined, sortBy, cursor: cursor || undefined, limit });
     return res.json(result);
   } catch {
@@ -33,7 +36,6 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/videos/:id - Public detail only for published videos.
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const video = requirePublishedVideo(req.params.id);
@@ -44,7 +46,6 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/videos/:id/comments - Get comments only for public videos.
 router.get('/:id/comments', async (req: Request, res: Response) => {
   try {
     if (!requirePublishedVideo(req.params.id)) {
@@ -56,7 +57,6 @@ router.get('/:id/comments', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/videos/:id/comments - Add a comment (requires login).
 router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const videoId = req.params.id;
@@ -95,7 +95,6 @@ router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest,
   }
 });
 
-// DELETE /api/videos/:id/comments/:commentId - Delete a comment (author or admin).
 router.delete('/:id/comments/:commentId', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!requirePublishedVideo(req.params.id)) {

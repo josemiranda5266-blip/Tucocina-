@@ -8,7 +8,7 @@ export interface StoredVideo {
   description: string;
   originalUrl: string;
   embedUrl: string;
-  platform: 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK' | 'OTHER';
+  platform: 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK' | 'FACEBOOK' | 'OTHER';
   platformVideoId: string;
   thumbnailUrl: string;
   creatorName: string;
@@ -223,6 +223,7 @@ class StoreManager {
   getVideoById(id: string): StoredVideo | null { return this.data.videos.find((v) => v.id === id) || null; }
   findDuplicate(platform: string, platformVideoId: string): StoredVideo | null { return this.data.videos.find((v) => v.platform === platform && v.platformVideoId === platformVideoId) || null; }
   addVideo(video: StoredVideo): StoredVideo { this.data.videos.unshift(video); this.persistDoc('videos', video); return video; }
+
   updateVideo(id: string, updates: Partial<StoredVideo>): StoredVideo | null {
     const index = this.data.videos.findIndex((v) => v.id === id);
     if (index === -1) return null;
@@ -231,6 +232,7 @@ class StoreManager {
     this.persistDoc('videos', updated);
     return updated;
   }
+
   deleteVideo(id: string): boolean {
     const videoExists = this.data.videos.some((v) => v.id === id);
     if (!videoExists) return false;
@@ -244,6 +246,7 @@ class StoreManager {
     for (const favorite of relatedFavorites) this.deleteDoc('favorites', favorite.id);
     return true;
   }
+
   purgeDuplicates(): { markedCount: number; markedIds: string[] } {
     const seenMap = new Map<string, StoredVideo>();
     const markedIds: string[] = [];
@@ -265,7 +268,9 @@ class StoreManager {
     }
     return { markedCount: markedIds.length, markedIds };
   }
+
   addReport(report: StoredReport): StoredReport { this.data.reports.unshift(report); this.persistDoc('reports', report); return report; }
+
   getReports(options: { status?: string; cursor?: string; limit?: number }) {
     let items = [...this.data.reports];
     if (options.status) items = items.filter((r) => r.status === options.status);
@@ -276,38 +281,86 @@ class StoreManager {
     const hasMore = startIndex + limit < items.length;
     return { items: sliced, limit, hasMore, nextCursor: hasMore && sliced.length ? sliced[sliced.length - 1].id : null, total: items.length };
   }
-  updateReport(id: string, updates: Partial<StoredReport>): StoredReport | null { const index = this.data.reports.findIndex((r) => r.id === id); if (index === -1) return null; const updated = { ...this.data.reports[index], ...updates }; this.data.reports[index] = updated; this.persistDoc('reports', updated); return updated; }
-  addFavorite(favorite: StoredFavorite): StoredFavorite { this.data.favorites.unshift(favorite); this.persistDoc('favorites', favorite); return favorite; }
-  removeFavorite(userId: string, videoId: string): boolean { const before = this.data.favorites.length; const found = this.data.favorites.find((f) => f.userId === userId && f.videoId === videoId); this.data.favorites = this.data.favorites.filter((f) => !(f.userId === userId && f.videoId === videoId)); if (found) this.deleteDoc('favorites', found.id); return this.data.favorites.length < before; }
+
+  updateReport(id: string, updates: Partial<StoredReport> | StoredReport['status']): StoredReport | null {
+    const index = this.data.reports.findIndex((r) => r.id === id);
+    if (index === -1) return null;
+    const normalizedUpdates: Partial<StoredReport> = typeof updates === 'string' ? { status: updates } : updates;
+    const updated = { ...this.data.reports[index], ...normalizedUpdates };
+    this.data.reports[index] = updated;
+    this.persistDoc('reports', updated);
+    return updated;
+  }
+
+  addFavorite(favorite: StoredFavorite): StoredFavorite;
+  addFavorite(userId: string, videoId: string): StoredFavorite;
+  addFavorite(favoriteOrUserId: StoredFavorite | string, videoId?: string): StoredFavorite {
+    const favorite: StoredFavorite = typeof favoriteOrUserId === 'string'
+      ? { id: `fav-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, userId: favoriteOrUserId, videoId: videoId!, createdAt: new Date().toISOString() }
+      : favoriteOrUserId;
+    this.data.favorites.unshift(favorite);
+    this.persistDoc('favorites', favorite);
+    return favorite;
+  }
+
+  removeFavorite(userId: string, videoId: string): boolean {
+    const before = this.data.favorites.length;
+    const found = this.data.favorites.find((f) => f.userId === userId && f.videoId === videoId);
+    this.data.favorites = this.data.favorites.filter((f) => !(f.userId === userId && f.videoId === videoId));
+    if (found) this.deleteDoc('favorites', found.id);
+    return this.data.favorites.length < before;
+  }
+
   isFavorite(userId: string, videoId: string): boolean { return this.data.favorites.some((f) => f.userId === userId && f.videoId === videoId); }
-  getFavorites(userId: string): StoredFavorite[] { return this.data.favorites.filter((f) => f.userId === userId); }
+
+  getFavorites(userId: string): StoredFavorite[];
+  getFavorites(userId: string, limit: number, cursor?: string): { items: StoredFavorite[]; limit: number; hasMore: boolean; nextCursor: string | null; total: number };
+  getFavorites(userId: string, limit?: number, cursor?: string): StoredFavorite[] | { items: StoredFavorite[]; limit: number; hasMore: boolean; nextCursor: string | null; total: number } {
+    const items = this.data.favorites.filter((f) => f.userId === userId);
+    if (limit === undefined) return items;
+    let startIndex = 0;
+    if (cursor) {
+      const found = items.findIndex((f) => f.id === cursor);
+      if (found !== -1) startIndex = found + 1;
+    }
+    const sliced = items.slice(startIndex, startIndex + limit);
+    const hasMore = startIndex + limit < items.length;
+    return { items: sliced, limit, hasMore, nextCursor: hasMore && sliced.length ? sliced[sliced.length - 1].id : null, total: items.length };
+  }
+
   addComment(comment: StoredComment): StoredComment { this.data.comments.push(comment); this.persistDoc('comments', comment); return comment; }
   getComments(videoId: string): StoredComment[] { return this.data.comments.filter((c) => c.videoId === videoId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()); }
 
-  /**
-   * Deletes a comment only when the authenticated actor owns it or is an admin.
-   * Authorization lives here so every caller gets the same security boundary.
-   */
+  /** Deletes a comment only when the authenticated actor owns it or is an admin. */
   deleteComment(id: string, actorUserId: string, isAdmin: boolean): boolean {
     const comment = this.data.comments.find((c) => c.id === id);
     if (!comment) return false;
     if (!isAdmin && comment.userId !== actorUserId) return false;
-
     this.data.comments = this.data.comments.filter((c) => c.id !== id);
     this.deleteDoc('comments', id);
     return true;
   }
 
   getMetrics() {
+    const videos = this.data.videos.length;
+    const publishedVideos = this.data.videos.filter((v) => v.status === 'PUBLISHED').length;
+    const pendingVideos = this.data.videos.filter((v) => v.status === 'PENDING_REVIEW').length;
+    const draftVideos = this.data.videos.filter((v) => v.status === 'DRAFT').length;
+    const hiddenVideos = this.data.videos.filter((v) => v.status === 'HIDDEN').length;
+    const openReports = this.data.reports.filter((r) => r.status === 'OPEN').length;
+    const totalUsers = this.knownUserCount;
     return {
-      videos: this.data.videos.length,
-      publishedVideos: this.data.videos.filter((v) => v.status === 'PUBLISHED').length,
-      pendingVideos: this.data.videos.filter((v) => v.status === 'PENDING_REVIEW').length,
-      draftVideos: this.data.videos.filter((v) => v.status === 'DRAFT').length,
-      users: this.knownUserCount,
-      reports: this.data.reports.filter((r) => r.status === 'OPEN').length,
+      videos,
+      publishedVideos,
+      pendingVideos,
+      draftVideos,
+      hiddenVideos,
+      reports: openReports,
       favorites: this.data.favorites.length,
       comments: this.data.comments.length,
+      totalVideos: videos,
+      openReports,
+      totalUsers,
     };
   }
 }

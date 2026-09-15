@@ -22,8 +22,17 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Install dependencies
         run: bun install
+
+      - name: Install Firebase CLI
+        run: bun add --global firebase-tools
 
       - name: Typecheck
         run: bun run typecheck

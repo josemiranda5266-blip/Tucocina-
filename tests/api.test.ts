@@ -199,7 +199,6 @@ describe('Tucocina Express API Functional E2E Suite', () => {
     let testVideoId = '';
 
     before(async () => {
-      // Import and publish a video for favorites test
       const res = await request('/api/admin/videos/import', {
         method: 'POST',
         headers: { Authorization: 'Bearer mock-token-adminUser-admin' },
@@ -261,7 +260,7 @@ describe('Tucocina Express API Functional E2E Suite', () => {
       });
       assert.equal(res.status, 200);
       assert.ok(Array.isArray(res.body.items));
-      const found = res.body.items.some((v: any) => v.id === testVideoId);
+      const found = res.body.items.some((v: any) => v.videoId === testVideoId);
       assert.equal(found, true);
     });
 
