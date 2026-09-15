@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
-import { Activity, Eye, Film, CheckCircle2, Clock, EyeOff, Flag, Users, Search, Heart, Share2, Smartphone, Monitor, Tablet } from 'lucide-react';
+import { Activity, Eye, Film, Users, Search, Heart, Share2, Smartphone, Monitor, Tablet } from 'lucide-react';
 
 const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: number }> = ({ icon, label, value }) => (
   <div className="bg-white p-5 rounded-2xl border border-stone-200/80 shadow-sm flex items-center gap-4">
@@ -68,7 +68,7 @@ export const AdminDashboard: React.FC = () => {
 
       <section className="grid lg:grid-cols-2 gap-5">
         <div className="bg-white rounded-2xl border border-stone-200 p-5"><h3 className="font-bold mb-4">Búsquedas más realizadas</h3>{analytics?.topSearches?.length ? <div className="space-y-2">{analytics.topSearches.map((item: any, index: number) => <div key={`${item.query}-${index}`} className="flex justify-between gap-4 text-sm"><span className="truncate">{index + 1}. {item.query}</span><strong>{item.count}</strong></div>)}</div> : <p className="text-sm text-stone-500">Aún no hay búsquedas registradas.</p>}</div>
-        <div className="bg-white rounded-2xl border border-stone-200 p-5"><h3 className="font-bold mb-4">Videos con más interacciones</h3>{analytics?.topVideos?.length ? <div className="space-y-2">{analytics.topVideos.map((item: any, index: number) => <div key={`${item.id}-${index}`} className="flex justify-between gap-4 text-sm"><span className="truncate">{index + 1}. {item.id}</span><strong>{item.count}</strong></div>)}</div> : <p className="text-sm text-stone-500">Aún no hay interacciones registradas.</p>}</div>
+        <div className="bg-white rounded-2xl border border-stone-200 p-5"><h3 className="font-bold mb-4">Videos con más interacciones</h3>{analytics?.topVideos?.length ? <div className="space-y-3">{analytics.topVideos.map((item: any, index: number) => <div key={`${item.id}-${index}`} className="flex items-center justify-between gap-4 text-sm"><div className="min-w-0"><p className="font-medium text-stone-900 truncate">{index + 1}. {item.title}</p><p className="text-xs text-stone-500 truncate">{item.platform ? `${item.platform} · ` : ''}{item.creatorName || 'Creador no disponible'} · ID: {item.id}</p></div><strong className="shrink-0">{item.count.toLocaleString('es-AR')}</strong></div>)}</div> : <p className="text-sm text-stone-500">Aún no hay interacciones registradas.</p>}</div>
       </section>
     </div>
   );
