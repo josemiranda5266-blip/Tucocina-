@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { dbStore, StoredComment } from '../data/store';
 import { authenticateUser, AuthenticatedRequest } from '../middleware/auth';
-import { checkVideoOriginStatus } from '../services/originCheck';
 
 const router = Router();
 const MAX_PAGE_SIZE = 50;
@@ -46,13 +45,9 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     }
 
-    // Verify if video was deleted by creator at origin platform
-    const originCheck = await checkVideoOriginStatus(video);
-    if (!originCheck.isAvailable) {
-      dbStore.deleteVideo(video.id);
-      return res.status(404).json({ error: { code: 'ORIGIN_DELETED', message: 'El video ya no está disponible en la plataforma de origen y ha sido removido.' } });
-    }
-
+    // Do not block playback on a live origin probe. The catalog already contains
+    // the published URL; temporary API/oEmbed failures must not turn a valid
+    // catalog entry into a 404 or delete it from Firestore.
     dbStore.incrementViews(videoId);
 
     return res.json(video);
@@ -136,4 +131,3 @@ router.delete('/:id/comments/:commentId', authenticateUser, async (req: Authenti
 });
 
 export default router;
-
