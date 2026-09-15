@@ -85,7 +85,10 @@ export const AppContent: React.FC = () => {
     if (!isAdmin && !loading) trackPageView(view === 'home' ? '/' : window.location.pathname);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  const handleVideoSelect = (video: Video) => { if (!isAdmin) track('view_video', { videoId: video.id }); handleNavigate('video-detail', video.id); };
+  // Video opens are tracked by VideoDetailPage after the detail data loads.
+  // Keeping the event in one place prevents a single navigation from being
+  // counted twice when the selection originated in a card, search result or favorites.
+  const handleVideoSelect = (video: Video) => { handleNavigate('video-detail', video.id); };
   const handleAdminTabChange = (tab: 'dashboard' | 'videos' | 'import' | 'reports') => { setAdminTab(tab); handleNavigate('admin', tab === 'dashboard' ? '' : tab); };
 
   const renderView = () => {
