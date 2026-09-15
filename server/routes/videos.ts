@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import { dbStore, StoredComment } from '../data/store';
 import { authenticateUser, AuthenticatedRequest } from '../middleware/auth';
 
@@ -8,6 +9,11 @@ const MAX_PAGE_SIZE = 50;
 function parseLimit(value: unknown, fallback = 12): number {
   const parsed = Number.parseInt(String(value ?? ''), 10);
   return Number.isFinite(parsed) ? Math.min(MAX_PAGE_SIZE, Math.max(1, parsed)) : fallback;
+}
+
+function requirePublishedVideo(videoId: string) {
+  const video = dbStore.getVideoById(videoId);
+  return video && video.status === 'PUBLISHED' ? video : null;
 }
 
 // GET /api/videos - Public catalog
@@ -20,15 +26,7 @@ router.get('/', async (req: Request, res: Response) => {
     const sortBy = req.query.sortBy === 'views' ? 'views' : 'recent';
     const cursor = typeof req.query.cursor === 'string' ? req.query.cursor.trim() : '';
 
-    const result = dbStore.getVideos({
-      categoryId: categoryId || undefined,
-      platform: platform || undefined,
-      searchQuery: searchQuery || undefined,
-      sortBy,
-      cursor: cursor || undefined,
-      limit,
-    });
-
+    const result = dbStore.getVideos({ categoryId: categoryId || undefined, platform: platform || undefined, searchQuery: searchQuery || undefined, sortBy, cursor: cursor || undefined, limit });
     return res.json(result);
   } catch {
     return res.status(500).json({ error: { code: 'FETCH_ERROR', message: 'Error al consultar el catálogo de videos' } });
@@ -38,44 +36,31 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /api/videos/:id - Public detail only for published videos.
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const videoId = req.params.id;
-    const video = dbStore.getVideoById(videoId);
-
-    if (!video || video.status !== 'PUBLISHED') {
-      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
-    }
-
-    // Do not block playback on a live origin probe. Temporary API/oEmbed failures
-    // must not turn a valid catalog entry into a 404 or delete it from Firestore.
-    // View counting is handled separately until the store exposes a safe increment.
+    const video = requirePublishedVideo(req.params.id);
+    if (!video) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     return res.json(video);
   } catch {
     return res.status(500).json({ error: { code: 'FETCH_ERROR', message: 'Error al obtener los detalles del video' } });
   }
 });
 
-// GET /api/videos/:id/comments - Get comments for a video
+// GET /api/videos/:id/comments - Get comments only for public videos.
 router.get('/:id/comments', async (req: Request, res: Response) => {
   try {
-    const videoId = req.params.id;
-    const video = dbStore.getVideoById(videoId);
-    if (!video) {
+    if (!requirePublishedVideo(req.params.id)) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     }
-
-    const comments = dbStore.getComments(videoId);
-    return res.json({ comments });
+    return res.json({ comments: dbStore.getComments(req.params.id) });
   } catch {
     return res.status(500).json({ error: { code: 'COMMENTS_FETCH_ERROR', message: 'Error al obtener comentarios' } });
   }
 });
 
-// POST /api/videos/:id/comments - Add a comment (requires login)
+// POST /api/videos/:id/comments - Add a comment (requires login).
 router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const videoId = req.params.id;
-    const video = dbStore.getVideoById(videoId);
-    if (!video) {
+    if (!requirePublishedVideo(videoId)) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     }
 
@@ -89,44 +74,39 @@ router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest,
       return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'El comentario excede el límite de 1000 caracteres.' } });
     }
 
-    const userId = req.user?.uid || 'user-unknown';
-    const userName = req.user?.displayName || req.user?.email || 'Usuario de Tucocina';
-    const userPhoto = req.user?.photoURL || undefined;
+    const userId = req.user?.uid;
+    if (!userId) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Autenticación requerida' } });
 
     const newComment: StoredComment = {
-      id: `comment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: `comment-${randomUUID()}`,
       videoId,
       userId,
-      userName,
-      userPhoto,
+      userName: req.user?.displayName || req.user?.email || 'Usuario de CociFlash',
+      userPhoto: req.user?.photoURL || undefined,
       text: sanitizedText,
       createdAt: new Date().toISOString(),
     };
 
     dbStore.addComment(newComment);
     return res.status(201).json({ message: 'Comentario agregado con éxito', comment: newComment });
-  } catch (error: any) {
-    return res.status(500).json({ error: { code: 'COMMENT_ADD_ERROR', message: error?.message || 'Error al guardar el comentario' } });
+  } catch (error) {
+    console.error('[Comments] Error creando comentario:', error);
+    return res.status(500).json({ error: { code: 'COMMENT_ADD_ERROR', message: 'Error al guardar el comentario' } });
   }
 });
 
-// DELETE /api/videos/:id/comments/:commentId - Delete a comment (author or admin)
+// DELETE /api/videos/:id/comments/:commentId - Delete a comment (author or admin).
 router.delete('/:id/comments/:commentId', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { id: videoId, commentId } = req.params;
-    const video = dbStore.getVideoById(videoId);
-    if (!video) {
+    if (!requirePublishedVideo(req.params.id)) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     }
 
     const userId = req.user?.uid;
-    if (!userId) {
-      return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Autenticación requerida' } });
-    }
+    if (!userId) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Autenticación requerida' } });
 
     const isAdmin = req.user?.role === 'ADMIN' || req.user?.admin === true;
-    const deleted = dbStore.deleteComment(commentId, userId, isAdmin);
-    if (!deleted) {
+    if (!dbStore.deleteComment(req.params.commentId, userId, isAdmin)) {
       return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No tienes permisos para eliminar este comentario o no fue encontrado.' } });
     }
 
