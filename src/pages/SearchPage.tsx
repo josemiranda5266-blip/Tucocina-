@@ -89,6 +89,14 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
     resetPagination();
   };
   const handleResetFilters = () => { setSearchQuery(''); setSelectedCategory(''); setSelectedPlatform(''); setSelectedSort('recent'); resetPagination(); };
+  const handleSearchResultSelect = (video: Video) => {
+    track('search_result_click', {
+      videoId: video.id,
+      query: normalizeAnalyticsQuery(searchQuery),
+      categoryId: selectedCategory || undefined,
+    });
+    onVideoSelect(video);
+  };
 
   const hasActiveFilters = Boolean(searchQuery.trim() || selectedCategory || selectedPlatform || selectedSort !== 'recent');
 
@@ -100,7 +108,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
       {hasActiveFilters && <div className="text-xs text-stone-500">{searchQuery.trim() ? `Buscando “${searchQuery.trim()}” en todos los videos publicados.` : 'Hay filtros activos en el catálogo.'}</div>}
       {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>}
       <AdSlot placement="SEARCH_MIDDLE" />
-      <VideoGrid videos={videos} loading={loading} onVideoSelect={onVideoSelect} />
+      <VideoGrid videos={videos} loading={loading} onVideoSelect={handleSearchResultSelect} />
       <Pagination currentPage={currentPage} hasMore={hasMore} onPageChange={setCurrentPage} />
     </div>
   );
