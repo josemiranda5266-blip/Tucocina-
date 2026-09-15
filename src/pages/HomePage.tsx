@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { SearchBar } from '../components/SearchBar';
 import { VideoGrid } from '../components/VideoGrid';
 import { CategoryCard } from '../components/CategoryCard';
@@ -6,19 +6,25 @@ import { AdSlot } from '../components/ads/AdSlot';
 import { Video, Category } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ChefHat, Flame, Clock, ArrowRight, Utensils, Shield } from 'lucide-react';
+import { ChefHat, Flame, Clock, ArrowRight, Utensils, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface HomePageProps {
   onNavigate: (view: string, param?: string) => void;
   onVideoSelect: (video: Video) => void;
 }
 
+const POPULAR_PAGE_SIZE = 12;
+
 export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect }) => {
   const { user, isAdmin } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [recentVideos, setRecentVideos] = useState<Video[]>([]);
   const [popularVideos, setPopularVideos] = useState<Video[]>([]);
+  const [popularPage, setPopularPage] = useState(1);
+  const [popularTotal, setPopularTotal] = useState(0);
+  const [popularCursors, setPopularCursors] = useState<Record<number, string | null>>({ 1: null });
   const [loading, setLoading] = useState(true);
+  const [popularLoading, setPopularLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -27,13 +33,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
         const [cats, recentRes, popularRes] = await Promise.all([
           api.getCategories(),
           api.getVideos({ limit: 8, sortBy: 'recent' }),
-          api.getVideos({ limit: 8, sortBy: 'views' }),
+          api.getVideos({ limit: POPULAR_PAGE_SIZE, sortBy: 'views' }),
         ]);
 
         if (active) {
           setCategories(cats);
           setRecentVideos(recentRes.items);
           setPopularVideos(popularRes.items);
+          setPopularTotal(popularRes.total);
+          setPopularCursors({ 1: null, 2: popularRes.nextCursor });
         }
       } catch (err) {
         console.error('Error al cargar datos en inicio:', err);
@@ -49,6 +57,92 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
   const handleSearchSubmit = (query: string) => {
     onNavigate('search', query);
   };
+
+  const popularTotalPages = Math.max(1, Math.ceil(popularTotal / POPULAR_PAGE_SIZE));
+
+  const pageNumbers = useMemo(() => {
+    if (popularTotalPages <= 7) return Array.from({ length: popularTotalPages }, (_, index) => index + 1);
+
+    const pages = new Set<number>([1, popularTotalPages, popularPage]);
+    if (popularPage > 2) pages.add(popularPage - 1);
+    if (popularPage < popularTotalPages - 1) pages.add(popularPage + 1);
+    return Array.from(pages).sort((a, b) => a - b);
+  }, [popularPage, popularTotalPages]);
+
+  const loadPopularPage = async (targetPage: number) => {
+    if (targetPage < 1 || targetPage > popularTotalPages || targetPage === popularPage || popularLoading) return;
+
+    setPopularLoading(true);
+    try {
+      let cursor = popularCursors[targetPage];
+
+      // Cursor pagination is sequential. If the user jumps directly to page 4,
+      // resolve the missing cursors first without making the UI depend on them.
+      for (let page = 2; page <= targetPage; page += 1) {
+        const knownCursor = popularCursors[page];
+        if (knownCursor !== undefined) {
+          cursor = knownCursor;
+          continue;
+        }
+
+        const previousCursor = popularCursors[page - 1];
+        const result = await api.getVideos({
+          limit: POPULAR_PAGE_SIZE,
+          sortBy: 'views',
+          ...(previousCursor ? { cursor: previousCursor } : {}),
+        });
+        setPopularCursors((current) => ({ ...current, [page]: result.nextCursor }));
+        cursor = result.nextCursor;
+      }
+
+      const result = await api.getVideos({
+        limit: POPULAR_PAGE_SIZE,
+        sortBy: 'views',
+        ...(cursor ? { cursor } : {}),
+      });
+
+      // When targetPage was resolved above, cursor points to the end of that
+      // page. Fetching targetPage again would skip it, so use the page-1 cursor.
+      const pageStartCursor = targetPage === 1 ? null : popularCursors[targetPage - 1];
+      const finalResult = targetPage === 1
+        ? result
+        : await api.getVideos({
+            limit: POPULAR_PAGE_SIZE,
+            sortBy: 'views',
+            ...(pageStartCursor ? { cursor: pageStartCursor } : {}),
+          });
+
+      setPopularVideos(finalResult.items);
+      setPopularPage(targetPage);
+      setPopularTotal(finalResult.total);
+      setPopularCursors((current) => ({
+        ...current,
+        [targetPage + 1]: finalResult.nextCursor,
+      }));
+      window.setTimeout(() => document.getElementById('home-popular')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+    } catch (err) {
+      console.error('Error al cambiar de página de recetas populares:', err);
+    } finally {
+      setPopularLoading(false);
+    }
+  };
+
+  const renderPageButton = (page: number) => (
+    <button
+      key={page}
+      type="button"
+      onClick={() => loadPopularPage(page)}
+      disabled={popularLoading}
+      aria-current={popularPage === page ? 'page' : undefined}
+      className={`min-w-10 h-10 px-3 rounded-xl text-sm font-bold transition-all disabled:opacity-60 ${
+        popularPage === page
+          ? 'bg-amber-700 text-white shadow-md'
+          : 'bg-white text-stone-700 border border-stone-200 hover:border-amber-500 hover:text-amber-700'
+      }`}
+    >
+      {page}
+    </button>
+  );
 
   return (
     <div className="space-y-12 pb-12">
@@ -81,10 +175,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
         </div>
       )}
 
-      {/* Top AdSlot Placement (Inert when ads.enabled === false) */}
       <AdSlot placement="HOME_TOP" />
 
-      {/* Hero Section */}
       <section id="home-hero" className="relative bg-gradient-to-br from-amber-900 via-amber-950 to-stone-900 text-white rounded-3xl p-8 sm:p-12 shadow-2xl overflow-hidden border border-amber-800/40">
         <div className="relative z-10 max-w-3xl space-y-6">
           <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-300 px-3.5 py-1 rounded-full text-xs font-semibold border border-amber-400/30">
@@ -104,7 +196,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
         </div>
       </section>
 
-      {/* Categories Bar */}
       <section id="home-categories" className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -131,26 +222,63 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
         </div>
       </section>
 
-      {/* Middle AdSlot Placement (Inert when ads.enabled === false) */}
       <AdSlot placement="HOME_MIDDLE" />
 
-      {/* Popular Videos Section */}
-      <section id="home-popular" className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <Flame className="w-5 h-5 text-amber-600" />
-          <h2 className="text-2xl font-bold font-serif text-stone-900">Recetas Populares</h2>
+      <section id="home-popular" className="space-y-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center space-x-2">
+            <Flame className="w-5 h-5 text-amber-600" />
+            <h2 className="text-2xl font-bold font-serif text-stone-900">Recetas Populares</h2>
+          </div>
+          <span className="hidden sm:inline text-xs font-semibold text-stone-500">
+            Página {popularPage} de {popularTotalPages}
+          </span>
         </div>
 
         <VideoGrid
           videos={popularVideos}
-          loading={loading}
+          loading={loading || popularLoading}
           onVideoSelect={onVideoSelect}
           emptyTitle="Aún no hay recetas destacadas"
           emptyMessage="Los administradores agregarán nuevos videos pronto."
         />
+
+        {popularTotalPages > 1 && (
+          <nav aria-label="Paginación de recetas populares" className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => loadPopularPage(popularPage - 1)}
+              disabled={popularPage === 1 || popularLoading}
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-white border border-stone-200 text-stone-700 text-sm font-bold hover:border-amber-500 hover:text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Anterior
+            </button>
+
+            <div className="flex items-center gap-1.5" role="list">
+              {pageNumbers.map((page, index) => (
+                <React.Fragment key={page}>
+                  {index > 0 && page - pageNumbers[index - 1] > 1 && (
+                    <span className="px-1 text-stone-400" aria-hidden="true">…</span>
+                  )}
+                  {renderPageButton(page)}
+                </React.Fragment>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => loadPopularPage(popularPage + 1)}
+              disabled={popularPage === popularTotalPages || popularLoading}
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-white border border-stone-200 text-stone-700 text-sm font-bold hover:border-amber-500 hover:text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Siguiente
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </nav>
+        )}
       </section>
 
-      {/* Recent Videos Section */}
       <section id="home-recent" className="space-y-4">
         <div className="flex items-center space-x-2">
           <Clock className="w-5 h-5 text-stone-700" />
@@ -165,7 +293,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
           emptyMessage="Pronto se publicarán nuevos videos de cocina."
         />
       </section>
-
     </div>
   );
 };
