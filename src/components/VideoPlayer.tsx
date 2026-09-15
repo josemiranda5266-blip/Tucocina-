@@ -1,6 +1,6 @@
 import React from 'react';
 import { Video } from '../types';
-import { ExternalLink, AlertTriangle, Instagram, Music, Youtube } from 'lucide-react';
+import { ExternalLink, AlertTriangle, Instagram, Music, Youtube, Facebook } from 'lucide-react';
 import { getSafeEmbedUrl, getSafeOriginalUrl } from '../utils/safeVideoUrls';
 
 interface VideoPlayerProps {
@@ -8,11 +8,25 @@ interface VideoPlayerProps {
   compact?: boolean;
 }
 
+function getFacebookThumbnail(video: Video): string | null {
+  if (video.platform !== 'FACEBOOK' || !video.thumbnailUrl) return null;
+  try {
+    const parsed = new URL(video.thumbnailUrl);
+    const host = parsed.hostname.toLowerCase();
+    const isFacebookOwned = host === 'facebook.com' || host.endsWith('.facebook.com') || host.endsWith('.fbcdn.net') || host.endsWith('.fbsbx.com');
+    if (!isFacebookOwned || parsed.protocol !== 'https:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false }) => {
   const safeEmbedUrl = getSafeEmbedUrl(video.embedUrl, video.platform);
   const safeOriginalUrl = getSafeOriginalUrl(video.originalUrl);
   const isVertical = video.platform === 'INSTAGRAM' || video.platform === 'TIKTOK';
   const isFacebook = video.platform === 'FACEBOOK';
+  const facebookThumbnail = getFacebookThumbnail(video);
 
   const renderPlatformBadge = () => {
     switch (video.platform) {
@@ -38,7 +52,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
           </span>
         );
       case 'FACEBOOK':
-        return <span className="inline-flex items-center text-xs font-semibold text-blue-400">Facebook Video</span>;
+        return <span className="inline-flex items-center space-x-1.5 text-xs font-semibold text-blue-400"><Facebook className="w-3.5 h-3.5" /><span>Facebook Video</span></span>;
       default:
         return <span className="text-xs text-stone-400 font-semibold">Video</span>;
     }
@@ -99,20 +113,30 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
 
   return (
     <div id="video-player-container" className="w-full max-w-4xl mx-auto bg-stone-900 rounded-2xl overflow-hidden shadow-2xl border border-stone-800">
-      {isFacebook && video.thumbnailUrl && (
+      {isFacebook && (
         <div className="relative aspect-video w-full overflow-hidden bg-stone-950 border-b border-stone-800">
-          <img
-            src={video.thumbnailUrl}
-            alt={`Miniatura de ${video.title}`}
-            className="h-full w-full object-cover"
-            loading="lazy"
-            referrerPolicy="no-referrer"
-          />
+          {facebookThumbnail ? (
+            <img
+              src={facebookThumbnail}
+              alt={`Miniatura de ${video.title}`}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-blue-950 via-stone-950 to-stone-900 px-6">
+              <div className="text-center max-w-md">
+                <Facebook className="w-12 h-12 text-blue-400 mx-auto mb-3" />
+                <p className="text-lg font-semibold text-white">Video de Facebook</p>
+                <p className="mt-1 text-sm text-stone-400">Facebook no proporcionó una miniatura pública verificable para este video.</p>
+              </div>
+            </div>
+          )}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-4 pt-12">
             <div className="flex items-end justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold text-blue-300">Facebook</p>
-                <p className="text-sm font-semibold text-white">Vista previa del video</p>
+                <p className="text-sm font-semibold text-white">{facebookThumbnail ? 'Vista previa del video' : 'Vista previa no disponible'}</p>
               </div>
               <OriginalLink />
             </div>
