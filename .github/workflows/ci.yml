@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Install Firebase CLI
+        run: bun add --global firebase-tools
+
       - name: Typecheck
         run: bun run typecheck
 
