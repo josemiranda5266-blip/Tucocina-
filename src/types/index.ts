@@ -1,4 +1,4 @@
-export type VideoPlatform = 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK' | 'OTHER';
+export type VideoPlatform = 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK' | 'FACEBOOK' | 'OTHER';
 
 export type VideoStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'HIDDEN' | 'REJECTED' | 'DUPLICATE';
 
@@ -85,7 +85,7 @@ export interface Comment {
   createdAt: string;
 }
 
-export interface VideoFilterOptions {
+export type VideoFilterOptions = {
   categoryId?: string;
   platform?: VideoPlatform;
   searchQuery?: string;
@@ -93,7 +93,7 @@ export interface VideoFilterOptions {
   sortBy?: 'recent' | 'views' | 'title';
   cursor?: string;
   limit?: number;
-}
+};
 
 export interface PaginatedResult<T> {
   items: T[];
