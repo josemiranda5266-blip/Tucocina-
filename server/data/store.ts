@@ -129,8 +129,7 @@ class StoreManager {
       this.knownUserCount = users.size;
 
       // One-time recovery path: if the Firestore catalog is empty but an old
-      // local db.json contains data, import it into Firestore. The repository's
-      // current db.json is empty, so this is only a backwards-compatible rescue.
+      // local db.json contains data, import it into Firestore.
       if (this.data.videos.length === 0 && this.data.reports.length === 0 && this.data.favorites.length === 0 && this.data.comments.length === 0) {
         const legacy = this.loadLegacyData();
         if (legacy.videos.length || legacy.reports.length || legacy.favorites.length || legacy.comments.length) {
@@ -165,7 +164,8 @@ class StoreManager {
 
   private async persistAll(): Promise<void> {
     const db = getAdminFirestore();
-    const batch = db.batch();
+    const operations: Array<{ collection: keyof DatabaseSchema; item: any }> = [];
+
     const collections: Array<[keyof DatabaseSchema, string]> = [
       ['videos', 'videos'],
       ['reports', 'reports'],
@@ -173,13 +173,22 @@ class StoreManager {
       ['comments', 'comments'],
     ];
 
-    for (const [key, collection] of collections) {
-      for (const item of this.data[key]) {
-        const { id, ...payload } = item as any;
-        batch.set(db.collection(collection).doc(id), payload);
-      }
+    for (const [key] of collections) {
+      for (const item of this.data[key]) operations.push({ collection: key, item });
     }
-    if (collections.length) await batch.commit();
+
+    // Firestore batches are limited to 500 write operations. Keep a safety
+    // margin so this recovery path remains reliable if the catalog grows.
+    const BATCH_SIZE = 450;
+    for (let offset = 0; offset < operations.length; offset += BATCH_SIZE) {
+      const batch = db.batch();
+      const chunk = operations.slice(offset, offset + BATCH_SIZE);
+      for (const { collection, item } of chunk) {
+        const { id, ...payload } = item;
+        batch.set(db.collection(String(collection)).doc(id), payload);
+      }
+      await batch.commit();
+    }
   }
 
   private persistDoc(collection: keyof DatabaseSchema, item: any): void {
@@ -194,10 +203,6 @@ class StoreManager {
     void getAdminFirestore().collection(String(collection)).doc(id).delete().catch((error) => {
       console.error(`[Store] Error eliminando ${String(collection)}/${id}:`, error);
     });
-  }
-
-  private replaceCollection(collection: keyof DatabaseSchema, items: any[]): void {
-    for (const item of items) this.persistDoc(collection, item);
   }
 
   getVideos(options: { status?: string; categoryId?: string; platform?: string; searchQuery?: string; sortBy?: 'recent' | 'views'; cursor?: string; limit?: number }) {
@@ -253,15 +258,20 @@ class StoreManager {
   }
 
   deleteVideo(id: string): boolean {
-    const before = this.data.videos.length;
+    const videoExists = this.data.videos.some((v) => v.id === id);
+    if (!videoExists) return false;
+
+    // Capture related documents before removing them from the in-memory cache.
+    const relatedComments = this.data.comments.filter((c) => c.videoId === id);
+    const relatedFavorites = this.data.favorites.filter((f) => f.videoId === id);
+
     this.data.videos = this.data.videos.filter((v) => v.id !== id);
     this.data.comments = this.data.comments.filter((c) => c.videoId !== id);
     this.data.favorites = this.data.favorites.filter((f) => f.videoId !== id);
-    if (this.data.videos.length === before) return false;
+
     this.deleteDoc('videos', id);
-    const db = getAdminFirestore();
-    for (const c of this.data.comments.filter((c) => c.videoId === id)) this.deleteDoc('comments', c.id);
-    for (const f of this.data.favorites.filter((f) => f.videoId === id)) this.deleteDoc('favorites', f.id);
+    for (const comment of relatedComments) this.deleteDoc('comments', comment.id);
+    for (const favorite of relatedFavorites) this.deleteDoc('favorites', favorite.id);
     return true;
   }
 
@@ -312,3 +322,4 @@ class StoreManager {
 }
 
 export const dbStore = new StoreManager();
+export const storeReady = dbStore.ready;
