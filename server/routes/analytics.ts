@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
-import { getAdminFirestore } from '../auth/firebaseAdmin';
+import { getAdminAuth, getAdminFirestore } from '../auth/firebaseAdmin';
 import { createRateLimiter } from '../middleware/rateLimit';
 
 const router = Router();
@@ -35,11 +35,33 @@ function countryFromHeaders(headers: Record<string, unknown>): string {
   return clean(value, 2)?.toUpperCase() || 'UNKNOWN';
 }
 
+async function isAdminRequest(req: any): Promise<boolean> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return false;
+  const token = authHeader.slice('Bearer '.length).trim();
+  if (!token) return false;
+  try {
+    const decoded = await getAdminAuth().verifyIdToken(token);
+    if (decoded.admin === true) return true;
+    const bootstrapEmails = (process.env.ADMIN_BOOTSTRAP_EMAILS || '').split(',').map((v) => v.trim().toLowerCase()).filter(Boolean);
+    if (decoded.email && bootstrapEmails.includes(decoded.email.toLowerCase())) return true;
+    const userSnap = await getAdminFirestore().collection('users').doc(decoded.uid).get();
+    return userSnap.exists && userSnap.data()?.role === 'ADMIN';
+  } catch {
+    // Analytics is public/non-blocking; invalid or expired optional auth simply
+    // falls back to treating the request as anonymous.
+    return false;
+  }
+}
+
 router.post('/event', analyticsLimiter, async (req, res) => {
   const event = clean(req.body?.event, 40);
   if (!event || !EVENT_NAMES.has(event)) {
     return res.status(400).json({ error: { code: 'INVALID_EVENT', message: 'Evento de analítica no permitido.' } });
   }
+
+  // Never contaminate audience metrics with administrator activity.
+  if (await isAdminRequest(req)) return res.status(204).send();
 
   const date = dayKey();
   const visitorId = clean(req.body?.visitorId, 80);
@@ -54,25 +76,28 @@ router.post('/event', analyticsLimiter, async (req, res) => {
   const base = db.collection('analytics_daily').doc(date);
 
   try {
+    const now = new Date().toISOString();
     const operations: Promise<unknown>[] = [
-      base.set({ updatedAt: new Date().toISOString() }, { merge: true }),
+      base.set({ updatedAt: now }, { merge: true }),
       base.collection('events').doc(event).set({ count: FieldValue.increment(1) }, { merge: true }),
-      base.collection('devices').doc(device).set({ count: FieldValue.increment(1) }, { merge: true }),
-      base.collection('countries').doc(country).set({ count: FieldValue.increment(1) }, { merge: true }),
     ];
 
+    // Visitor/session documents are the source of truth for unique audience
+    // metrics. Store their latest country/device so the admin dashboard does
+    // not confuse event volume with visitor volume.
     if (sessionId) {
-      operations.push(base.collection('sessions').doc(sessionId).set({ lastSeenAt: new Date().toISOString() }, { merge: true }));
+      operations.push(base.collection('sessions').doc(sessionId).set({ lastSeenAt: now, country, device }, { merge: true }));
     }
     if (visitorId) {
-      operations.push(base.collection('visitors').doc(visitorId).set({ lastSeenAt: new Date().toISOString() }, { merge: true }));
+      operations.push(base.collection('visitors').doc(visitorId).set({ lastSeenAt: now, country, device }, { merge: true }));
     }
     if (videoId && ['view_video', 'video_play', 'favorite_add', 'share_video'].includes(event)) {
       operations.push(base.collection('videos').doc(videoId).set({ count: FieldValue.increment(1), lastEvent: event }, { merge: true }));
     }
-    if (query && event.startsWith('search')) {
-      const searchKey = Buffer.from(query.toLowerCase()).toString('base64url').slice(0, 120);
-      operations.push(base.collection('searches').doc(searchKey).set({ query, count: FieldValue.increment(1) }, { merge: true }));
+    if (query && event === 'search_performed') {
+      const normalizedQuery = query.toLowerCase().trim().replace(/\s+/g, ' ');
+      const searchKey = Buffer.from(normalizedQuery).toString('base64url').slice(0, 120);
+      operations.push(base.collection('searches').doc(searchKey).set({ query: normalizedQuery, count: FieldValue.increment(1) }, { merge: true }));
     }
     if (categoryId && event === 'view_category') {
       operations.push(base.collection('categories').doc(categoryId).set({ count: FieldValue.increment(1) }, { merge: true }));
