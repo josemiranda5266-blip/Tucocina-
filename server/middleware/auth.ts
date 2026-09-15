@@ -43,7 +43,9 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
   const token = authHeader.slice('Bearer '.length).trim();
   if (!token) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Formato de token no válido' } });
 
-  if (process.env.USE_MOCK_AUTH === 'true' && token.startsWith('mock-token-')) {
+  // Mock authentication is strictly development/test-only. Never allow a
+  // client-supplied mock token to authenticate when NODE_ENV is production.
+  if (process.env.NODE_ENV !== 'production' && process.env.USE_MOCK_AUTH === 'true' && token.startsWith('mock-token-')) {
     const isAdmin = token.includes('admin');
     const uid = token.replace('mock-token-', '').replace('-admin', '');
     req.user = { uid: uid || 'test-user-uid', email: `${uid || 'test'}@example.com`, role: isAdmin ? 'ADMIN' : 'USER', admin: isAdmin };
