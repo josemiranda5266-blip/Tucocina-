@@ -47,13 +47,26 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
   }, [searchQuery, selectedCategory, selectedPlatform, selectedSort, currentPage, pageCursors]);
 
   const resetPagination = () => { setCurrentPage(1); setPageCursors({}); };
+  const handleSearch = (q: string) => {
+    setSearchQuery(q);
+    // A text search is intentionally global. This prevents an old category or
+    // platform selection from hiding a video that clearly matches its title.
+    if (q.trim()) {
+      setSelectedCategory('');
+      setSelectedPlatform('');
+    }
+    resetPagination();
+  };
   const handleResetFilters = () => { setSearchQuery(''); setSelectedCategory(''); setSelectedPlatform(''); setSelectedSort('recent'); resetPagination(); };
+
+  const hasActiveFilters = Boolean(searchQuery.trim() || selectedCategory || selectedPlatform || selectedSort !== 'recent');
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="space-y-2"><h1 className="text-3xl font-extrabold font-serif text-stone-900">Buscador de Videos de Cocina</h1><p className="text-stone-600 text-sm">Explorá videos de cocina filtrados por ingredientes, plataforma o tipo de plato.</p></div>
-      <SearchBar initialValue={searchQuery} onSearch={(q) => { setSearchQuery(q); resetPagination(); }} />
-      <FilterBar categories={categories} selectedCategory={selectedCategory} selectedPlatform={selectedPlatform} selectedSort={selectedSort} onCategoryChange={(cat) => { setSelectedCategory(cat); resetPagination(); }} onPlatformChange={(plat) => { setSelectedPlatform(plat); resetPagination(); }} onSortChange={(sort) => { setSelectedSort(sort); resetPagination(); }} onReset={handleResetFilters} />
+      <div className="space-y-2"><h1 className="text-3xl font-extrabold font-serif text-stone-900">Buscador de Videos de Cocina</h1><p className="text-stone-600 text-sm">Buscá por nombre del plato, ingrediente, creador o etiquetas. La búsqueda por texto recorre todo el catálogo publicado.</p></div>
+      <SearchBar initialValue={searchQuery} onSearch={handleSearch} />
+      <FilterBar categories={categories} selectedCategory={selectedCategory} selectedPlatform={selectedPlatform} selectedSort={selectedSort} onCategoryChange={(cat) => { setSelectedCategory(cat); setSearchQuery(''); resetPagination(); }} onPlatformChange={(plat) => { setSelectedPlatform(plat); setSearchQuery(''); resetPagination(); }} onSortChange={(sort) => { setSelectedSort(sort); resetPagination(); }} onReset={handleResetFilters} />
+      {hasActiveFilters && <div className="text-xs text-stone-500">{searchQuery.trim() ? `Buscando “${searchQuery.trim()}” en todos los videos publicados.` : 'Hay filtros activos en el catálogo.'}</div>}
       {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>}
       <AdSlot placement="SEARCH_MIDDLE" />
       <VideoGrid videos={videos} loading={loading} onVideoSelect={onVideoSelect} />
