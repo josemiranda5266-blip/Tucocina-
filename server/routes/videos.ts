@@ -48,7 +48,8 @@ router.get('/:id', async (req: Request, res: Response) => {
     // Do not block playback on a live origin probe. The catalog already contains
     // the published URL; temporary API/oEmbed failures must not turn a valid
     // catalog entry into a 404 or delete it from Firestore.
-    dbStore.incrementViews(videoId);
+    // View counting is intentionally handled separately until the store exposes
+    // a persistence-safe increment operation.
 
     return res.json(video);
   } catch {
