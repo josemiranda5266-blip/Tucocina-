@@ -1,3 +1,5 @@
+import { auth } from '../config/firebase';
+
 type AnalyticsEvent =
   | 'page_view' | 'session_start' | 'search_performed' | 'search_result_click' | 'search_no_results'
   | 'view_category' | 'view_video' | 'video_play' | 'video_open_external' | 'favorite_add' | 'favorite_remove'
@@ -33,16 +35,24 @@ export function track(event: AnalyticsEvent, payload: EventPayload = {}): void {
 
   const visitorId = getId(VISITOR_KEY, 'visitor');
   const sessionId = getId(SESSION_KEY, 'session');
-  const body = JSON.stringify({ event, visitorId, sessionId, ...payload });
 
-  void fetch('/api/analytics/event', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body,
-    keepalive: true,
-  }).catch(() => {
-    // Analytics is deliberately non-blocking and must never affect the user experience.
-  });
+  // Authenticated requests allow the backend to identify and exclude admins.
+  void (async () => {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (auth.currentUser) {
+        try { headers.Authorization = `Bearer ${await auth.currentUser.getIdToken()}`; } catch { /* continue anonymously */ }
+      }
+      await fetch('/api/analytics/event', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ event, visitorId, sessionId, ...payload }),
+        keepalive: true,
+      });
+    } catch {
+      // Analytics is deliberately non-blocking and must never affect the user experience.
+    }
+  })();
 }
 
 export function trackSessionStart(): void {
