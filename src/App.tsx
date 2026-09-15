@@ -54,7 +54,7 @@ function writeLocation(view: string, param = '') {
 }
 
 export const AppContent: React.FC = () => {
-  const { user, profile, loading, authError, clearAuthError } = useAuth();
+  const { user, profile, loading, isAdmin, authError, clearAuthError } = useAuth();
   const [location, setLocation] = useState<AppLocation>(() => readLocation());
   const [adminTab, setAdminTab] = useState<'dashboard' | 'videos' | 'import' | 'reports'>(() => {
     const tab = new URLSearchParams(window.location.search).get('tab');
@@ -63,17 +63,29 @@ export const AppContent: React.FC = () => {
   const needsLegalAcceptance = Boolean(!loading && user && (!profile || profile.legalVersion !== CURRENT_LEGAL_VERSION));
 
   useEffect(() => {
-    trackSessionStart(); trackPageView(window.location.pathname);
+    // Wait for Firebase auth to resolve before starting analytics. If this
+    // browser belongs to an administrator, do not create any public metrics.
+    if (loading || isAdmin) return;
+    trackSessionStart();
+    trackPageView(window.location.pathname);
     const handlePopState = () => { const next = readLocation(); setLocation(next); trackPageView(window.location.pathname); };
-    window.addEventListener('popstate', handlePopState); return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [loading, isAdmin]);
+
   useEffect(() => {
     if (location.view !== 'admin') return;
     const requestedTab = location.param;
     if (requestedTab === 'videos' || requestedTab === 'import' || requestedTab === 'reports') setAdminTab(requestedTab); else setAdminTab('dashboard');
   }, [location]);
-  const handleNavigate = (view: string, param = '') => { writeLocation(view, param); setLocation({ view, param }); trackPageView(view === 'home' ? '/' : window.location.pathname); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-  const handleVideoSelect = (video: Video) => { track('view_video', { videoId: video.id }); handleNavigate('video-detail', video.id); };
+
+  const handleNavigate = (view: string, param = '') => {
+    writeLocation(view, param);
+    setLocation({ view, param });
+    if (!isAdmin && !loading) trackPageView(view === 'home' ? '/' : window.location.pathname);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const handleVideoSelect = (video: Video) => { if (!isAdmin) track('view_video', { videoId: video.id }); handleNavigate('video-detail', video.id); };
   const handleAdminTabChange = (tab: 'dashboard' | 'videos' | 'import' | 'reports') => { setAdminTab(tab); handleNavigate('admin', tab === 'dashboard' ? '' : tab); };
 
   const renderView = () => {
@@ -83,7 +95,7 @@ export const AppContent: React.FC = () => {
     switch (location.view) {
       case 'home': return <HomePage onNavigate={handleNavigate} onVideoSelect={handleVideoSelect} />;
       case 'search': return <SearchPage key={location.param} initialQuery={location.param} onVideoSelect={handleVideoSelect} />;
-      case 'categories': return <CategoriesPage onCategorySelect={(catId) => { track('view_category', { categoryId: catId }); handleNavigate('search', `cat:${catId}`); }} />;
+      case 'categories': return <CategoriesPage onCategorySelect={(catId) => { if (!isAdmin) track('view_category', { categoryId: catId }); handleNavigate('search', `cat:${catId}`); }} />;
       case 'video-detail': return <VideoDetailPage videoId={location.param} onBack={() => handleNavigate('home')} />;
       case 'favorites': return <FavoritesPage onVideoSelect={handleVideoSelect} />;
       default: return <HomePage onNavigate={handleNavigate} onVideoSelect={handleVideoSelect} />;
