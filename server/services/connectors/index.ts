@@ -166,11 +166,12 @@ export class FacebookConnector implements VideoConnector {
     const parsed = new URL(urlStr);
     const path = parsed.pathname.toLowerCase();
     const idMatch = parsed.pathname.match(/\/(?:videos?|reel|reels)\/(\d+)/i) ||
+      parsed.pathname.match(/\/share\/[vr]\/(?:\d+|[a-zA-Z0-9_-]+)/i) ||
       parsed.pathname.match(/\/(\d{8,})\/?$/);
     const queryId = parsed.searchParams.get('v') || parsed.searchParams.get('video_id') || '';
     const platformVideoId = idMatch?.[1] || queryId || createHash('sha256').update(parsed.href).digest('hex').slice(0, 32);
 
-    const isVideoPath = /\/(?:videos?|reel|reels)\//i.test(path) || Boolean(queryId);
+    const isVideoPath = /\/(?:videos?|reel|reels)\//i.test(path) || /\/share\/[vr]\//i.test(path) || Boolean(queryId);
     if (!isVideoPath && !idMatch) {
       throw new Error('La URL de Facebook no parece ser un video o reel público válido');
     }
