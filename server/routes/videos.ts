@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import { dbStore, StoredComment } from '../data/store';
 import { authenticateUser, AuthenticatedRequest } from '../middleware/auth';
+import { videoBelongsToCurrentSite } from '../config/site';
 
 const router = Router();
 const MAX_PAGE_SIZE = 50;
@@ -13,7 +14,7 @@ function parseLimit(value: unknown, fallback = 12): number {
 
 function requirePublishedVideo(videoId: string) {
   const video = dbStore.getVideoById(videoId);
-  return video && video.status === 'PUBLISHED' ? video : null;
+  return video && video.status === 'PUBLISHED' && videoBelongsToCurrentSite(video) ? video : null;
 }
 
 router.get('/', async (req: Request, res: Response) => {
@@ -30,7 +31,9 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     const result = dbStore.getVideos({ categoryId: categoryId || undefined, platform: platform || undefined, searchQuery: searchQuery || undefined, sortBy, cursor: cursor || undefined, limit });
-    return res.json(result);
+    const items = result.items.filter(videoBelongsToCurrentSite);
+    const nextCursor = items.length && result.hasMore ? items[items.length - 1].id : null;
+    return res.json({ ...result, items, nextCursor, total: items.length });
   } catch {
     return res.status(500).json({ error: { code: 'FETCH_ERROR', message: 'Error al consultar el catálogo de videos' } });
   }
