@@ -63,12 +63,20 @@ router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest,
     if (!requirePublishedVideo(videoId)) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     }
+
     const { text } = req.body || {};
-    if (typeof text !== 'string' || !text.trim()) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'El comentario no puede estar vacío.' } });
+    if (typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'El comentario no puede estar vacío.' } });
+    }
+
     const sanitizedText = text.trim();
-    if (sanitizedText.length > 1000) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'El comentario excede el límite de 1000 caracteres.' } });
+    if (sanitizedText.length > 1000) {
+      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'El comentario excede el límite de 1000 caracteres.' } });
+    }
+
     const userId = req.user?.uid;
     if (!userId) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Autenticación requerida' } });
+
     const newComment: StoredComment = {
       id: `comment-${randomUUID()}`,
       videoId,
@@ -78,6 +86,7 @@ router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest,
       text: sanitizedText,
       createdAt: new Date().toISOString(),
     };
+
     dbStore.addComment(newComment);
     return res.status(201).json({ message: 'Comentario agregado con éxito', comment: newComment });
   } catch (error) {
@@ -88,11 +97,18 @@ router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest,
 
 router.delete('/:id/comments/:commentId', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!requirePublishedVideo(req.params.id)) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
+    if (!requirePublishedVideo(req.params.id)) {
+      return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
+    }
+
     const userId = req.user?.uid;
     if (!userId) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Autenticación requerida' } });
+
     const isAdmin = req.user?.role === 'ADMIN' || req.user?.admin === true;
-    if (!dbStore.deleteComment(req.params.commentId, userId, isAdmin)) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No tienes permisos para eliminar este comentario o no fue encontrado.' } });
+    if (!dbStore.deleteComment(req.params.commentId, userId, isAdmin)) {
+      return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No tienes permisos para eliminar este comentario o no fue encontrado.' } });
+    }
+
     return res.json({ message: 'Comentario eliminado con éxito' });
   } catch {
     return res.status(500).json({ error: { code: 'COMMENT_DELETE_ERROR', message: 'Error al eliminar comentario' } });
