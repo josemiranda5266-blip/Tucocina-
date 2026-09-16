@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Video } from '../types';
-import { ExternalLink, AlertTriangle, Instagram, Music, Youtube } from 'lucide-react';
+import { ExternalLink, AlertTriangle, Instagram, Music, Youtube, Share2, Check } from 'lucide-react';
 import { getSafeEmbedUrl, getSafeOriginalUrl } from '../utils/safeVideoUrls';
 import { track } from '../services/analytics';
 
@@ -27,6 +27,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
   const isVertical = video.platform === 'INSTAGRAM' || video.platform === 'TIKTOK';
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const playbackTrackedRef = useRef(false);
+  const [shareStatus, setShareStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const youtubeSrc = useMemo(
     () => safeEmbedUrl && video.platform === 'YOUTUBE' ? youtubeEmbedWithApi(safeEmbedUrl) : safeEmbedUrl,
     [safeEmbedUrl, video.platform]
@@ -45,7 +46,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
         try { data = JSON.parse(data); } catch { return; }
       }
 
-      // YouTube IFrame Player API: state 1 = PLAYING.
       if (data?.event === 'onStateChange' && data?.info === 1 && !playbackTrackedRef.current) {
         playbackTrackedRef.current = true;
         track('video_play', { videoId: video.id });
@@ -58,11 +58,44 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
 
   const handleYoutubeLoad = () => {
     if (video.platform !== 'YOUTUBE' || !iframeRef.current?.contentWindow) return;
-    // Establish the postMessage subscription used by the YouTube embedded player API.
     iframeRef.current.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: video.id }), 'https://www.youtube.com');
   };
 
   const handleOriginalOpen = () => track('video_open_external', { videoId: video.id });
+
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    const shareData = {
+      title: video.title,
+      text: `Mirá este video en CociFlash: ${video.title}`,
+      url: shareUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = shareUrl;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+      }
+
+      setShareStatus('success');
+      track('video_share', { videoId: video.id, platform: video.platform });
+      window.setTimeout(() => setShareStatus('idle'), 2200);
+    } catch {
+      setShareStatus('error');
+      window.setTimeout(() => setShareStatus('idle'), 2500);
+    }
+  };
 
   const renderPlatformBadge = () => {
     switch (video.platform) {
@@ -73,6 +106,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
       default: return <span className="text-xs text-stone-400 font-semibold">Video</span>;
     }
   };
+
+  const renderShareButton = () => (
+    <button
+      type="button"
+      onClick={handleShare}
+      className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-500 active:bg-emerald-700 transition-colors"
+      title="Compartir este video"
+      aria-label="Compartir este video"
+    >
+      {shareStatus === 'success' ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+      <span>{shareStatus === 'success' ? '¡Compartido!' : shareStatus === 'error' ? 'No se pudo compartir' : 'Compartir'}</span>
+    </button>
+  );
 
   const renderIframe = (src: string, title: string) => (
     <iframe
@@ -92,7 +138,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
     return (
       <div id="video-player-container" className="w-full flex flex-col items-center my-2">
         <div className={`w-full ${compact ? 'max-w-[340px]' : 'max-w-[390px]'} bg-stone-950 rounded-2xl overflow-hidden shadow-2xl border border-stone-800 flex flex-col`}>
-          <div className="bg-stone-900/90 px-3.5 py-2 border-b border-stone-800 flex items-center justify-between">{renderPlatformBadge()}{safeOriginalUrl && <a href={safeOriginalUrl} target="_blank" rel="noopener noreferrer" onClick={handleOriginalOpen} className="text-[11px] font-medium text-stone-400 hover:text-white flex items-center space-x-1 transition-colors" title="Abrir en plataforma original"><span>Original</span><ExternalLink className="w-3 h-3" /></a>}</div>
+          <div className="bg-stone-900/90 px-3.5 py-2 border-b border-stone-800 flex items-center justify-between gap-2">
+            {renderPlatformBadge()}
+            <div className="flex items-center gap-2">
+              {renderShareButton()}
+              {safeOriginalUrl && <a href={safeOriginalUrl} target="_blank" rel="noopener noreferrer" onClick={handleOriginalOpen} className="text-[11px] font-medium text-stone-400 hover:text-white flex items-center space-x-1 transition-colors" title="Abrir en plataforma original"><span>Original</span><ExternalLink className="w-3 h-3" /></a>}
+            </div>
+          </div>
           <div className={`relative w-full ${compact ? 'h-[460px] max-h-[55vh]' : 'h-[580px] sm:h-[620px] max-h-[72vh]'} bg-black flex items-center justify-center overflow-hidden`}>
             {safeEmbedUrl ? renderIframe(youtubeSrc || safeEmbedUrl, video.title) : <div className="text-center p-6 text-stone-400"><AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-2" /><p className="text-stone-200 text-sm font-semibold mb-1">Reproducción integrada no disponible</p><p className="text-xs mb-3 text-stone-400">Podés abrir este contenido directamente en la plataforma original.</p>{safeOriginalUrl && <a href={safeOriginalUrl} target="_blank" rel="noopener noreferrer" onClick={handleOriginalOpen} className="inline-flex items-center space-x-1.5 bg-amber-600 text-white font-medium px-4 py-2 rounded-xl text-xs shadow hover:bg-amber-500 transition-colors"><span>Ver en la plataforma original</span><ExternalLink className="w-3.5 h-3.5" /></a>}</div>}
           </div>
@@ -103,6 +155,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
 
   return (
     <div id="video-player-container" className="w-full max-w-4xl mx-auto bg-stone-900 rounded-2xl overflow-hidden shadow-2xl border border-stone-800">
+      <div className="px-4 py-3 bg-stone-950 border-b border-stone-800 flex items-center justify-between gap-3">
+        {renderPlatformBadge()}
+        {renderShareButton()}
+      </div>
       <div className="relative aspect-video w-full max-h-[72vh] bg-black flex items-center justify-center">
         {safeEmbedUrl ? renderIframe(youtubeSrc || safeEmbedUrl, video.title) : <div className="text-center p-8 text-stone-400"><AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-3" /><p className="text-stone-200 font-semibold mb-2">Este video no permite reproducción integrada directa</p><p className="text-xs mb-4">Podés verlo directamente en la plataforma original.</p>{safeOriginalUrl && <a href={safeOriginalUrl} target="_blank" rel="noopener noreferrer" onClick={handleOriginalOpen} className="inline-flex items-center space-x-2 bg-amber-600 hover:bg-amber-500 text-white font-medium px-4 py-2 rounded-xl text-sm transition-colors"><span>Ver en la plataforma original</span><ExternalLink className="w-4 h-4" /></a>}</div>}
       </div>
