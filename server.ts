@@ -15,6 +15,9 @@ import authRoutes from './server/routes/authRoutes';
 import { errorHandler } from './server/middleware/errorHandler';
 import { createRateLimiter } from './server/middleware/rateLimit';
 import { storeReady } from './server/data/store';
+// Must load after StoreManager exists and before requests are served. The facade
+// keeps legacy videos as CociFlash and scopes all video access to SITE_ID.
+import './server/data/siteScopedStore';
 
 dotenv.config();
 
