@@ -1,79 +1,43 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Video } from '../types';
-import { ExternalLink, AlertTriangle, Instagram, Music, Youtube, Share2, Check } from 'lucide-react';
-import { getSafeEmbedUrl, getSafeOriginalUrl } from '../utils/safeVideoUrls';
+import React, { useState } from 'react';
+import { ExternalLink, Instagram, Music, Youtube, Share2, Check, AlertCircle } from 'lucide-react';
+import type { Video } from '../types';
 import { track } from '../services/analytics';
+import { isSafeEmbedUrl, isSafeOriginalVideoUrl } from '../utils/safeVideoUrls';
 
 interface VideoPlayerProps {
   video: Video;
-  compact?: boolean;
+  vertical?: boolean;
 }
 
-function youtubeEmbedWithApi(url: string): string {
+function OriginalLink({ video }: { video: Video }) {
+  return (
+    <a href={video.originalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors">
+      <ExternalLink className="w-3.5 h-3.5" />
+      Ver video original
+    </a>
+  );
+}
+
+function getFacebookThumbnail(video: Video): string | null {
+  if (video.platform !== 'FACEBOOK' || !video.thumbnailUrl) return null;
   try {
-    const parsed = new URL(url);
-    if (!/^(www\.)?youtube(?:-nocookie)?\.com$/i.test(parsed.hostname)) return url;
-    parsed.searchParams.set('enablejsapi', '1');
-    parsed.searchParams.set('origin', window.location.origin);
-    return parsed.toString();
+    const url = new URL(video.thumbnailUrl);
+    const host = url.hostname.toLowerCase();
+    const allowed = host === 'facebook.com' || host.endsWith('.facebook.com') || host.endsWith('.fbcdn.net') || host.endsWith('.fbsbx.com');
+    return url.protocol === 'https:' && allowed ? url.toString() : null;
   } catch {
-    return url;
+    return null;
   }
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false }) => {
-  const safeEmbedUrl = getSafeEmbedUrl(video.embedUrl, video.platform);
-  const safeOriginalUrl = getSafeOriginalUrl(video.originalUrl);
-  const isVertical = video.platform === 'INSTAGRAM' || video.platform === 'TIKTOK';
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const playbackTrackedRef = useRef(false);
+export default function VideoPlayer({ video, vertical = false }: VideoPlayerProps) {
   const [shareStatus, setShareStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const youtubeSrc = useMemo(
-    () => safeEmbedUrl && video.platform === 'YOUTUBE' ? youtubeEmbedWithApi(safeEmbedUrl) : safeEmbedUrl,
-    [safeEmbedUrl, video.platform]
-  );
-
-  useEffect(() => {
-    playbackTrackedRef.current = false;
-    if (!youtubeSrc || video.platform !== 'YOUTUBE') return;
-
-    const handleMessage = (event: MessageEvent) => {
-      if (event.source !== iframeRef.current?.contentWindow) return;
-      if (!/^(https?:\/\/)?(www\.)?youtube(?:-nocookie)?\.com$/i.test(event.origin)) return;
-
-      let data: any = event.data;
-      if (typeof data === 'string') {
-        try { data = JSON.parse(data); } catch { return; }
-      }
-
-      if (data?.event === 'onStateChange' && data?.info === 1 && !playbackTrackedRef.current) {
-        playbackTrackedRef.current = true;
-        track('video_play', { videoId: video.id });
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [youtubeSrc, video.id, video.platform]);
-
-  const handleYoutubeLoad = () => {
-    if (video.platform !== 'YOUTUBE' || !iframeRef.current?.contentWindow) return;
-    iframeRef.current.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: video.id }), 'https://www.youtube.com');
-  };
-
-  const handleOriginalOpen = () => track('video_open_external', { videoId: video.id });
 
   const handleShare = async () => {
-    const shareUrl = window.location.href;
-    const shareData = {
-      title: video.title,
-      text: `Mirá este video en CociFlash: ${video.title}`,
-      url: shareUrl,
-    };
-
     try {
+      const shareUrl = window.location.href;
       if (navigator.share) {
-        await navigator.share(shareData);
+        await navigator.share({ title: video.title, text: `Mira este video en CociFlash: ${video.title}`, url: shareUrl });
       } else if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareUrl);
       } else {
@@ -87,9 +51,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
         document.execCommand('copy');
         textarea.remove();
       }
-
       setShareStatus('success');
-      track('video_share', { videoId: video.id, platform: video.platform });
+      track('share_video', { videoId: video.id, platform: video.platform });
       window.setTimeout(() => setShareStatus('idle'), 2200);
     } catch {
       setShareStatus('error');
@@ -103,66 +66,69 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
       case 'TIKTOK': return <span className="inline-flex items-center space-x-1.5 text-xs font-semibold text-teal-400"><Music className="w-3.5 h-3.5" /><span>TikTok Video (Vertical)</span></span>;
       case 'YOUTUBE': return <span className="inline-flex items-center space-x-1.5 text-xs font-semibold text-red-400"><Youtube className="w-3.5 h-3.5" /><span>YouTube Video</span></span>;
       case 'FACEBOOK': return <span className="inline-flex items-center text-xs font-semibold text-blue-400">Facebook Video</span>;
-      default: return <span className="text-xs text-stone-400 font-semibold">Video</span>;
+      default: return null;
     }
   };
 
-  const renderShareButton = () => (
-    <button
-      type="button"
-      onClick={handleShare}
-      className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-500 active:bg-emerald-700 transition-colors"
-      title="Compartir este video"
-      aria-label="Compartir este video"
-    >
-      {shareStatus === 'success' ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+  const originalUrlSafe = isSafeOriginalVideoUrl(video.originalUrl);
+  const embedUrlSafe = isSafeEmbedUrl(video.embedUrl);
+  const facebookThumbnail = getFacebookThumbnail(video);
+
+  const shareButton = (
+    <button type="button" onClick={handleShare} className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-500 active:bg-emerald-700 transition-colors" title="Compartir este video" aria-label="Compartir este video">
+      {shareStatus === 'success' ? <Check className="w-4 h-4" /> : shareStatus === 'error' ? <AlertCircle className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
       <span>{shareStatus === 'success' ? '¡Compartido!' : shareStatus === 'error' ? 'No se pudo compartir' : 'Compartir'}</span>
     </button>
   );
 
-  const renderIframe = (src: string, title: string) => (
-    <iframe
-      ref={iframeRef}
-      src={src}
-      title={title}
-      onLoad={handleYoutubeLoad}
-      className="w-full h-full border-0"
-      loading="lazy"
-      referrerPolicy="strict-origin-when-cross-origin"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      allowFullScreen
-    />
-  );
-
-  if (isVertical) {
+  if (video.platform === 'FACEBOOK') {
     return (
-      <div id="video-player-container" className="w-full flex flex-col items-center my-2">
-        <div className={`w-full ${compact ? 'max-w-[340px]' : 'max-w-[390px]'} bg-stone-950 rounded-2xl overflow-hidden shadow-2xl border border-stone-800 flex flex-col`}>
-          <div className="bg-stone-900/90 px-3.5 py-2 border-b border-stone-800 flex items-center justify-between gap-2">
-            {renderPlatformBadge()}
-            <div className="flex items-center gap-2">
-              {renderShareButton()}
-              {safeOriginalUrl && <a href={safeOriginalUrl} target="_blank" rel="noopener noreferrer" onClick={handleOriginalOpen} className="text-[11px] font-medium text-stone-400 hover:text-white flex items-center space-x-1 transition-colors" title="Abrir en plataforma original"><span>Original</span><ExternalLink className="w-3 h-3" /></a>}
-            </div>
+      <div className={`overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 ${vertical ? 'max-w-sm mx-auto' : ''}`}>
+        <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+          {renderPlatformBadge()}
+          <div className="flex items-center gap-2">
+            {shareButton}
+            {originalUrlSafe && <OriginalLink video={video} />}
           </div>
-          <div className={`relative w-full ${compact ? 'h-[460px] max-h-[55vh]' : 'h-[580px] sm:h-[620px] max-h-[72vh]'} bg-black flex items-center justify-center overflow-hidden`}>
-            {safeEmbedUrl ? renderIframe(youtubeSrc || safeEmbedUrl, video.title) : <div className="text-center p-6 text-stone-400"><AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-2" /><p className="text-stone-200 text-sm font-semibold mb-1">Reproducción integrada no disponible</p><p className="text-xs mb-3 text-stone-400">Podés abrir este contenido directamente en la plataforma original.</p>{safeOriginalUrl && <a href={safeOriginalUrl} target="_blank" rel="noopener noreferrer" onClick={handleOriginalOpen} className="inline-flex items-center space-x-1.5 bg-amber-600 text-white font-medium px-4 py-2 rounded-xl text-xs shadow hover:bg-amber-500 transition-colors"><span>Ver en la plataforma original</span><ExternalLink className="w-3.5 h-3.5" /></a>}</div>}
+        </div>
+        {facebookThumbnail ? (
+          <div className="aspect-video bg-slate-900"><img src={facebookThumbnail} alt={video.title} className="h-full w-full object-cover" loading="lazy" /></div>
+        ) : (
+          <div className="aspect-video bg-slate-900 flex flex-col items-center justify-center gap-3 px-6 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600/20 text-blue-400 text-2xl font-black">f</div>
+            <p className="text-sm font-semibold text-white">Video de Facebook</p>
+            <p className="max-w-md text-xs leading-5 text-slate-400">Facebook no proporcionó una miniatura pública verificable para este video.</p>
           </div>
+        )}
+        <div className="border-t border-slate-800 px-4 py-3">
+          <p className="text-sm font-semibold text-white line-clamp-2">{video.title}</p>
+          {embedUrlSafe ? <iframe src={video.embedUrl} title={video.title} className="mt-3 aspect-video w-full rounded-xl" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowFullScreen /> : null}
+          {originalUrlSafe && <div className="mt-3"><OriginalLink video={video} /></div>}
         </div>
       </div>
     );
   }
 
+  if (!embedUrlSafe) {
+    return (
+      <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 text-center">
+        <ExternalLink className="mx-auto mb-3 h-8 w-8 text-slate-500" />
+        <p className="text-sm font-semibold text-white">Este video no permite reproducción integrada directa.</p>
+        {originalUrlSafe && <div className="mt-4 flex justify-center"><OriginalLink video={video} /></div>}
+      </div>
+    );
+  }
+
   return (
-    <div id="video-player-container" className="w-full max-w-4xl mx-auto bg-stone-900 rounded-2xl overflow-hidden shadow-2xl border border-stone-800">
-      <div className="px-4 py-3 bg-stone-950 border-b border-stone-800 flex items-center justify-between gap-3">
+    <div className={`overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 ${vertical ? 'max-w-sm mx-auto' : ''}`}>
+      <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
         {renderPlatformBadge()}
-        {renderShareButton()}
+        <div className="flex items-center gap-2">
+          {shareButton}
+          {originalUrlSafe && <OriginalLink video={video} />}
+        </div>
       </div>
-      <div className="relative aspect-video w-full max-h-[72vh] bg-black flex items-center justify-center">
-        {safeEmbedUrl ? renderIframe(youtubeSrc || safeEmbedUrl, video.title) : <div className="text-center p-8 text-stone-400"><AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-3" /><p className="text-stone-200 font-semibold mb-2">Este video no permite reproducción integrada directa</p><p className="text-xs mb-4">Podés verlo directamente en la plataforma original.</p>{safeOriginalUrl && <a href={safeOriginalUrl} target="_blank" rel="noopener noreferrer" onClick={handleOriginalOpen} className="inline-flex items-center space-x-2 bg-amber-600 hover:bg-amber-500 text-white font-medium px-4 py-2 rounded-xl text-sm transition-colors"><span>Ver en la plataforma original</span><ExternalLink className="w-4 h-4" /></a>}</div>}
-      </div>
-      {video.platform === 'FACEBOOK' && safeOriginalUrl && <div className="flex items-center justify-between gap-3 px-4 py-3 bg-stone-950 border-t border-stone-800"><p className="text-xs text-stone-400">Si Facebook no permite mostrar este video aquí, podés abrirlo en Facebook.</p><a href={safeOriginalUrl} target="_blank" rel="noopener noreferrer" onClick={handleOriginalOpen} className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 transition-colors"><span>Ver en Facebook</span><ExternalLink className="w-3.5 h-3.5" /></a></div>}
+      <iframe src={video.embedUrl} title={video.title} className={`w-full ${vertical ? 'aspect-[9/16]' : 'aspect-video'}`} loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowFullScreen />
     </div>
   );
-};
+}
