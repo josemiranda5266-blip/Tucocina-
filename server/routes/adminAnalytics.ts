@@ -199,6 +199,7 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
       },
       funnel: {
         searchToResultClickRate: searches ? Math.min(1, searchResultClicks / searches) : 0,
+        resultClickToVideoOpenRate: searchResultClicks ? Math.min(1, videoViews / searchResultClicks) : 0,
         videoOpenToPlayRate: videoViews ? Math.min(1, videoPlays / videoViews) : 0,
         playToExternalRate: videoPlays ? Math.min(1, externalOpens / videoPlays) : 0,
         noResultsRate: searches ? Math.min(1, searchNoResults / searches) : 0,
