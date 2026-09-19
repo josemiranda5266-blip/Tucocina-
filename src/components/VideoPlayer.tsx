@@ -89,7 +89,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
       }
 
       setShareStatus('success');
-      track('video_share', { videoId: video.id, platform: video.platform });
+      track('share_video', { videoId: video.id });
       window.setTimeout(() => setShareStatus('idle'), 2200);
     } catch {
       setShareStatus('error');
