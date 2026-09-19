@@ -4,6 +4,7 @@ import { getAdminFirestore } from '../auth/firebaseAdmin';
 
 export interface StoredVideo {
   id: string;
+  siteId?: import('../../src/config/site').SiteId;
   title: string;
   description: string;
   originalUrl: string;

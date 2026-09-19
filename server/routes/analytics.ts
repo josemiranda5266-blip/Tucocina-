@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminAuth, getAdminFirestore } from '../auth/firebaseAdmin';
 import { createRateLimiter } from '../middleware/rateLimit';
+import { CURRENT_SITE_ID } from '../config/site';
 
 const router = Router();
 
@@ -71,19 +72,20 @@ router.post('/event', analyticsLimiter, async (req, res) => {
   const country = countryFromHeaders(req.headers as Record<string, unknown>);
   const db = getAdminFirestore();
   const base = db.collection('analytics_daily').doc(date);
+  const siteId = CURRENT_SITE_ID;
 
   try {
     const now = new Date().toISOString();
     const operations: Promise<unknown>[] = [
       base.set({ updatedAt: now }, { merge: true }),
-      base.collection('events').doc(event).set({ count: FieldValue.increment(1) }, { merge: true }),
+      base.collection('events').doc(`${siteId}:${event}`).set({ event, count: FieldValue.increment(1), siteId }, { merge: true }),
     ];
 
     if (sessionId) {
-      operations.push(base.collection('sessions').doc(sessionId).set({ lastSeenAt: now, country, device }, { merge: true }));
+      operations.push(base.collection('sessions').doc(`${siteId}:${sessionId}`).set({ lastSeenAt: now, country, device, siteId }, { merge: true }));
     }
     if (visitorId) {
-      operations.push(base.collection('visitors').doc(visitorId).set({ lastSeenAt: now, country, device }, { merge: true }));
+      operations.push(base.collection('visitors').doc(`${siteId}:${visitorId}`).set({ lastSeenAt: now, country, device, siteId }, { merge: true }));
     }
 
     // Keep each video/event pair in its own document. A single video can have
@@ -91,17 +93,17 @@ router.post('/event', analyticsLimiter, async (req, res) => {
     // would overwrite the event type and make the funnel unreliable.
     if (videoId && ['view_video', 'video_play', 'video_open_external', 'favorite_add', 'share_video'].includes(event)) {
       const interactionKey = Buffer.from(`${videoId}:${event}`).toString('base64url').slice(0, 180);
-      operations.push(base.collection('video_interactions').doc(interactionKey).set({ videoId, event, count: FieldValue.increment(1), updatedAt: now }, { merge: true }));
+      operations.push(base.collection('video_interactions').doc(interactionKey).set({ videoId, event, count: FieldValue.increment(1), updatedAt: now, siteId }, { merge: true }));
     }
     if (query && event === 'search_performed') {
       const normalizedQuery = query.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
       if (normalizedQuery && normalizedQuery !== 'all') {
-        const searchKey = Buffer.from(normalizedQuery).toString('base64url').slice(0, 120);
-        operations.push(base.collection('searches').doc(searchKey).set({ query: normalizedQuery, count: FieldValue.increment(1) }, { merge: true }));
+        const searchKey = Buffer.from(`${siteId}:${normalizedQuery}`).toString('base64url').slice(0, 120);
+        operations.push(base.collection('searches').doc(searchKey).set({ query: normalizedQuery, count: FieldValue.increment(1), siteId }, { merge: true }));
       }
     }
     if (categoryId && event === 'view_category') {
-      operations.push(base.collection('categories').doc(categoryId).set({ count: FieldValue.increment(1) }, { merge: true }));
+      operations.push(base.collection('categories').doc(categoryId).set({ count: FieldValue.increment(1), siteId }, { merge: true }));
     }
 
     await Promise.all(operations);

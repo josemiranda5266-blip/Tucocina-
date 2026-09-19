@@ -54,6 +54,7 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
     const now = new Date().toISOString();
     const newVideo: StoredVideo = {
       id: videoId,
+      siteId: undefined,
       title: (customTitle && customTitle.trim()) ? customTitle.trim() : extracted.title,
       description: (customDescription && customDescription.trim()) ? customDescription.trim() : extracted.description,
       originalUrl: extracted.originalUrl,
@@ -267,6 +268,7 @@ router.post('/discovery/import', async (req: AuthenticatedRequest, res: Response
 
     const newVideo: StoredVideo = {
       id: newVideoId,
+      siteId: undefined,
       title: extracted.title,
       description: extracted.description,
       originalUrl: extracted.originalUrl,

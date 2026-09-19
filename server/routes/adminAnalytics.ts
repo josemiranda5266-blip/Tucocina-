@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { DocumentReference } from 'firebase-admin/firestore';
 import { authenticateUser, requireAdmin, AuthenticatedRequest } from '../middleware/auth';
 import { getAdminFirestore } from '../auth/firebaseAdmin';
+import { CURRENT_SITE_ID } from '../config/site';
 
 const router = Router();
 router.use(authenticateUser);
@@ -28,7 +29,9 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
     const videoCatalog = new Map<string, { title: string; creatorName?: string; platform?: string }>();
 
     videoSnapshot.docs.forEach((doc) => {
-      const data = doc.data() as { title?: string; creatorName?: string; platform?: string };
+      const data = doc.data() as { title?: string; creatorName?: string; platform?: string; siteId?: string };
+      const docSite = String(data.siteId || 'COCIFLASH').trim().toUpperCase();
+      if (docSite !== CURRENT_SITE_ID) return;
       videoCatalog.set(doc.id, {
         title: data.title || 'Video sin título',
         creatorName: data.creatorName,
@@ -79,8 +82,9 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
         doc.collection('sessions').get(),
       ]);
 
+      const siteEventRows = eventRows.filter((row: any) => String(row.siteId || 'COCIFLASH').trim().toUpperCase() === CURRENT_SITE_ID);
       const eventMap = new Map<string, number>(
-        eventRows.map((row: any) => [row.id, Number(row.count || 0)])
+        siteEventRows.map((row: any) => [String(row.event || row.id).replace(`${CURRENT_SITE_ID}:`, ''), Number(row.count || 0)])
       );
 
       const dayPageViews = eventMap.get('page_view') || 0;
@@ -105,7 +109,9 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
       externalOpens += dayExternalOpens;
 
       visitorSnap.docs.forEach((visitorDoc) => {
-        const data = visitorDoc.data() as { country?: string; device?: string };
+        const data = visitorDoc.data() as { country?: string; device?: string; siteId?: string };
+        const docSite = String(data.siteId || 'COCIFLASH').trim().toUpperCase();
+        if (docSite !== CURRENT_SITE_ID) return;
         uniqueVisitors.set(visitorDoc.id, {
           country: data.country || 'UNKNOWN',
           device: data.device || 'unknown',
@@ -113,10 +119,15 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
       });
 
       sessionSnap.docs.forEach((sessionDoc) => {
+        const data = sessionDoc.data() as { siteId?: string };
+        const docSite = String(data.siteId || 'COCIFLASH').trim().toUpperCase();
+        if (docSite !== CURRENT_SITE_ID) return;
         uniqueSessions.add(sessionDoc.id);
       });
 
       for (const row of interactionRows as any[]) {
+        const rowSite = String(row.siteId || 'COCIFLASH').trim().toUpperCase();
+        if (rowSite !== CURRENT_SITE_ID) continue;
         const videoId = typeof row.videoId === 'string' ? row.videoId : '';
         if (!videoId) continue;
 
@@ -144,6 +155,8 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
       }
 
       for (const row of searchRows as any[]) {
+        const rowSite = String(row.siteId || 'COCIFLASH').trim().toUpperCase();
+        if (rowSite !== CURRENT_SITE_ID) continue;
         const previous = searchTerms.get(row.id);
         searchTerms.set(row.id, {
           query: row.query || row.id,
