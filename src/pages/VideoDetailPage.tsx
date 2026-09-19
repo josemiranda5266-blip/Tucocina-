@@ -107,6 +107,7 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
                 href={safeOriginalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => track('video_open_external', { videoId: video.id })}
                 title="Abrir video original"
                 className="p-2.5 bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 rounded-full transition-colors flex items-center justify-center"
               >
@@ -165,6 +166,7 @@ export const VideoDetailPage: React.FC<VideoDetailPageProps> = ({ videoId, onBac
               href={safeOriginalUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => track('video_open_external', { videoId: video.id })}
               className="inline-flex items-center justify-center space-x-2 bg-stone-900 hover:bg-black text-white font-medium px-5 py-2.5 rounded-xl text-sm shadow transition-all"
             >
               <span>Ver receta original en {video.platform}</span>
