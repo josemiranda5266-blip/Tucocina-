@@ -84,7 +84,7 @@ router.get('/summary', async (req: AuthenticatedRequest, res: Response) => {
 
       const siteEventRows = eventRows.filter((row: any) => String(row.siteId || 'COCIFLASH').trim().toUpperCase() === CURRENT_SITE_ID);
       const eventMap = new Map<string, number>(
-        siteEventRows.map((row: any) => [row.id, Number(row.count || 0)])
+        siteEventRows.map((row: any) => [String(row.event || row.id).replace(`${CURRENT_SITE_ID}:`, ''), Number(row.count || 0)])
       );
 
       const dayPageViews = eventMap.get('page_view') || 0;
