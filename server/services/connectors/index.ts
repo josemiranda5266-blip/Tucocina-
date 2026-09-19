@@ -62,7 +62,7 @@ export class YouTubeConnector implements VideoConnector {
       const response = await fetch(oembedUrl, { headers: { 'User-Agent': 'Tucocina-Importer/1.0' }, redirect: 'follow', signal: AbortSignal.timeout(5000) });
       if (response.ok) {
         const data = await response.json();
-        title = cleanText(data.title, title, 300);
+        title = cleanText(data.title, title, 200);
         creatorName = cleanText(data.author_name, creatorName, 150);
         if (typeof data.author_url === 'string') creatorUrl = data.author_url;
       }
@@ -134,8 +134,8 @@ export class TikTokConnector implements VideoConnector {
       });
       if (oembedRes.ok) {
         const data = await oembedRes.json();
-        if (data.title) title = cleanText(data.title, title, 300);
-        if (data.author_name) creatorName = cleanText(data.author_name, creatorName, 150);
+        if (data.title) title = cleanText(data.title, title, 200);
+        if (data.author_name) creatorName = cleanText(data.author_name, creatorName, 100);
         if (data.thumbnail_url) thumbnailUrl = data.thumbnail_url;
       }
     } catch {

@@ -21,10 +21,13 @@ const optionalCategoryId = z.preprocess(
 
 export const ImportVideoSchema = z.object({
   url: sanitizeUrlInput,
-  title: optionalString,
-  description: optionalString,
-  thumbnailUrl: optionalString,
-  creatorName: optionalString,
+  title: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().max(200, 'Título demasiado largo').optional(),
+  ),
+  description: z.string().max(2000, 'Descripción demasiado larga').optional(),
+  thumbnailUrl: z.string().url('Miniatura inválida').or(z.literal('')).optional(),
+  creatorName: z.string().max(100, 'Nombre del creador demasiado largo').optional(),
   categoryId: optionalCategoryId,
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
 });
