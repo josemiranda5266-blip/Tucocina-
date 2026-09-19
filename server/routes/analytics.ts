@@ -78,7 +78,7 @@ router.post('/event', analyticsLimiter, async (req, res) => {
     const now = new Date().toISOString();
     const operations: Promise<unknown>[] = [
       base.set({ updatedAt: now }, { merge: true }),
-      base.collection('events').doc(event).set({ count: FieldValue.increment(1), siteId }, { merge: true }),
+      base.collection('events').doc(`${siteId}:${event}`).set({ event, count: FieldValue.increment(1), siteId }, { merge: true }),
     ];
 
     if (sessionId) {
@@ -98,7 +98,7 @@ router.post('/event', analyticsLimiter, async (req, res) => {
     if (query && event === 'search_performed') {
       const normalizedQuery = query.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
       if (normalizedQuery && normalizedQuery !== 'all') {
-        const searchKey = Buffer.from(normalizedQuery).toString('base64url').slice(0, 120);
+        const searchKey = Buffer.from(`${siteId}:${normalizedQuery}`).toString('base64url').slice(0, 120);
         operations.push(base.collection('searches').doc(searchKey).set({ query: normalizedQuery, count: FieldValue.increment(1), siteId }, { merge: true }));
       }
     }
