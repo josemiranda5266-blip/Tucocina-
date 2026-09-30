@@ -26,7 +26,6 @@ export const ImportVideoSchema = z.object({
   description: optionalString,
   thumbnailUrl: optionalString,
   creatorName: optionalString,
-  verticalId: z.enum(['COCINA', 'OFICIOS']).optional(),
   categoryId: optionalCategoryId,
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
 });
