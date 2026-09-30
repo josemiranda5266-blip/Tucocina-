@@ -38,6 +38,7 @@ export const AdminVideos: React.FC = () => {
 
   // Import bulk state
   const [bulkUrls, setBulkUrls] = useState('');
+  const [bulkVerticalId, setBulkVerticalId] = useState<'COCINA' | 'OFICIOS'>('COCINA');
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkResults, setBulkResults] = useState<BulkResult[]>([]);
   const [purgingDuplicates, setPurgingDuplicates] = useState(false);
@@ -158,7 +159,7 @@ export const AdminVideos: React.FC = () => {
     setBulkLoading(true);
     setError(null);
     try {
-      const results = await api.adminImportVideosBulk(urls);
+      const results = await api.adminImportVideosBulk(urls, bulkVerticalId);
       setBulkResults(results);
       setBulkUrls('');
       showNotification('¡Importación procesada correctamente!');
