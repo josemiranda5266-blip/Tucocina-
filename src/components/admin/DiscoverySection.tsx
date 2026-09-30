@@ -256,6 +256,7 @@ export const DiscoverySection: React.FC<DiscoverySectionProps> = ({ onImportSucc
           )}
         </button>
       </div>
+      </div>
 
       {/* Controls / Filter Form */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-2">
