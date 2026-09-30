@@ -55,8 +55,9 @@ export const AdminVideos: React.FC = () => {
   const [saveLoading, setSaveLoading] = useState(false);
 
   useEffect(() => {
-    api.getCategories().then(setCategories).catch(() => setCategories([]));
-  }, []);
+    const verticalId = editingVideo?.verticalId || 'COCINA';
+    api.getCategories(verticalId).then(setCategories).catch(() => setCategories([]));
+  }, [editingVideo?.verticalId]);
 
   const showNotification = (msg: string) => {
     setSuccessMessage(msg);
