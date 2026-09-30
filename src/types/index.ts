@@ -1,3 +1,5 @@
+export type ContentVerticalId = 'COCINA' | 'OFICIOS';
+
 export type VideoPlatform = 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK' | 'FACEBOOK' | 'OTHER';
 
 export type VideoStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'HIDDEN' | 'REJECTED' | 'DUPLICATE';
@@ -9,6 +11,7 @@ export interface Video {
   originalUrl: string;
   embedUrl: string;
   platform: VideoPlatform;
+  verticalId?: ContentVerticalId;
   thumbnailUrl: string;
   creatorName: string;
   creatorUrl?: string;
@@ -24,6 +27,7 @@ export interface Video {
 }
 
 export interface Category {
+  verticalId?: ContentVerticalId;
   id: string;
   name: string;
   slug: string;
@@ -87,6 +91,7 @@ export interface Comment {
 
 export type VideoFilterOptions = {
   categoryId?: string;
+  verticalId?: ContentVerticalId;
   platform?: VideoPlatform;
   searchQuery?: string;
   status?: VideoStatus;
