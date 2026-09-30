@@ -18,7 +18,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     const limit = parseLimit(req.query.limit);
     const cursor = typeof req.query.cursor === 'string' ? req.query.cursor.trim() : undefined;
 
-    const result = dbStore.getFavorites(userId, limit, cursor);
+    const result = dbStore.getFavorites(userId, limit, cursor, 'COCINA');
     return res.json(result);
   } catch {
     return res.status(500).json({ error: { code: 'FAVORITES_ERROR', message: 'Error al obtener tus videos favoritos' } });
@@ -41,6 +41,10 @@ router.post('/:videoId', async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user!.uid;
     const videoId = req.params.videoId;
     const video = dbStore.getVideoById(videoId);
+
+    if (video && (video.verticalId || 'COCINA') !== 'COCINA') {
+      return res.status(404).json({ error: { code: 'VIDEO_NOT_FOUND', message: 'El video no está disponible en CociFlash' } });
+    }
 
     if (!video || video.status !== 'PUBLISHED') {
       return res.status(404).json({ error: { code: 'VIDEO_NOT_FOUND', message: 'El video no está disponible para favoritos' } });
