@@ -70,7 +70,7 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
 
     try {
       // Use preTitle if the admin provided one before importing
-      const video = await api.adminImportVideo(url.trim());
+      const video = await api.adminImportVideo(url.trim(), verticalId);
       
       // If the admin provided a preTitle, immediately apply it
       if (preTitle.trim()) {
