@@ -29,7 +29,7 @@ function parseLimit(value: unknown, fallback = 20): number {
 }
 
 const ReportStatusSchema = z.object({ status: z.enum(['OPEN', 'REVIEWED', 'RESOLVED', 'REJECTED']) });
-const BulkImportSchema = z.object({ urls: z.array(z.string().url()).min(1).max(25) });
+const BulkImportSchema = z.object({ urls: z.array(z.string().url()).min(1).max(25), verticalId: z.enum(['COCINA', 'OFICIOS']).default('COCINA') });
 
 router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -87,8 +87,8 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
 
 router.post('/videos/import-bulk', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { urls } = BulkImportSchema.parse(req.body);
-    const results = await importVideosInBulk(urls);
+    const { urls, verticalId } = BulkImportSchema.parse(req.body);
+    const results = await importVideosInBulk(urls, verticalId);
     return res.status(200).json({ results });
   } catch (error: any) {
     if (error.name === 'ZodError') return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.errors[0]?.message || 'Lista de URLs inválida' } });
