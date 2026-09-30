@@ -14,6 +14,7 @@ import { importVideosInBulk } from '../services/bulkVideoImport';
 import { YouTubeDiscoveryProvider } from '../services/discovery';
 import { purgeOriginDeletedVideos } from '../services/originCheck';
 import { dbStore, StoredVideo } from '../data/store';
+import { isCategoryInVertical } from '../services/content/verticals';
 
 const router = Router();
 const MAX_PAGE_SIZE = 50;
@@ -43,6 +44,9 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
       categoryId: customCategoryId,
       tags: customTags,
     } = ImportVideoSchema.parse(req.body);
+    if (!isCategoryInVertical(customCategoryId, verticalId)) {
+      return res.status(400).json({ error: { code: 'INVALID_CATEGORY_FOR_VERTICAL', message: 'La categoría no pertenece a la vertical seleccionada.' } });
+    }
     const extracted = await processExternalVideoUrl(url);
     const classification = classifyVideo({
       title: customTitle || extracted.title,
@@ -120,6 +124,10 @@ router.patch('/videos/:id', async (req: AuthenticatedRequest, res: Response) => 
     const updates = UpdateVideoSchema.parse(req.body);
     const doc = dbStore.getVideoById(videoId);
     if (!doc) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
+
+    if (!isCategoryInVertical(updates.categoryId, doc.verticalId || 'COCINA')) {
+      return res.status(400).json({ error: { code: 'INVALID_CATEGORY_FOR_VERTICAL', message: 'La categoría no pertenece a la vertical del video.' } });
+    }
 
     if (updates.status === 'PUBLISHED') {
       const merged = { ...doc, ...updates };
@@ -254,6 +262,9 @@ router.post('/discovery/import', async (req: AuthenticatedRequest, res: Response
   try {
     const { videoId, verticalId, categoryId: customCategoryId, tags: customTags } = discoverySingleImportSchema.parse(req.body);
 
+    if (!isCategoryInVertical(customCategoryId, verticalId)) {
+      return res.status(400).json({ error: { code: 'INVALID_CATEGORY_FOR_VERTICAL', message: 'La categoría no pertenece a la vertical seleccionada.' } });
+    }
     const safeUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const extracted = await processExternalVideoUrl(safeUrl);
 
@@ -332,6 +343,9 @@ router.post('/discovery/import-batch', async (req: AuthenticatedRequest, res: Re
 
     for (const item of items) {
       try {
+        if (!isCategoryInVertical(item.categoryId, item.verticalId)) {
+          throw new Error('La categoría no pertenece a la vertical seleccionada.');
+        }
         const safeUrl = `https://www.youtube.com/watch?v=${item.videoId}`;
         const extracted = await processExternalVideoUrl(safeUrl);
 
