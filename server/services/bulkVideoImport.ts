@@ -35,34 +35,6 @@ export async function importVideosInBulk(urls: string[], verticalId: 'COCINA' | 
       }
 
       const classification = classifyVideo(extracted, verticalId);
-        const now = new Date().toISOString();
-        const videoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        const dupVideo: StoredVideo = {
-          id: videoId,
-          title: extracted.title,
-          description: extracted.description,
-          originalUrl: extracted.originalUrl,
-          embedUrl: extracted.embedUrl,
-          platform: extracted.platform,
-          platformVideoId: extracted.platformVideoId,
-          verticalId,
-          thumbnailUrl: extracted.thumbnailUrl,
-          creatorName: extracted.creatorName,
-          creatorUrl: extracted.creatorUrl || '',
-          durationSeconds: extracted.durationSeconds || 0,
-          categoryId: classification.categoryId || null,
-          tags: classification.tags,
-          status: 'DUPLICATE',
-          views: 0,
-          createdAt: now,
-          updatedAt: now,
-        };
-        dbStore.addVideo(dupVideo);
-        results.push({ url, status: 'DUPLICATE', videoId: dupVideo.id, title: extracted.title, categoryId: classification.categoryId, tags: classification.tags });
-        continue;
-      }
-
-      const classification = classifyVideo(extracted, verticalId);
       const now = new Date().toISOString();
       const videoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const video: StoredVideo = {
