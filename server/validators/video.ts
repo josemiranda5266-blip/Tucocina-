@@ -21,10 +21,12 @@ const optionalCategoryId = z.preprocess(
 
 export const ImportVideoSchema = z.object({
   url: sanitizeUrlInput,
+  verticalId: z.enum(['COCINA', 'OFICIOS']).default('COCINA'),
   title: optionalString,
   description: optionalString,
   thumbnailUrl: optionalString,
   creatorName: optionalString,
+  verticalId: z.enum(['COCINA', 'OFICIOS']).optional(),
   categoryId: optionalCategoryId,
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
 });
