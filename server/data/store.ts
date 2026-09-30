@@ -349,8 +349,18 @@ class StoreManager {
 
   getFavorites(userId: string, verticalId?: 'COCINA' | 'OFICIOS'): StoredFavorite[];
   getFavorites(userId: string, limit: number, cursor?: string, verticalId?: 'COCINA' | 'OFICIOS'): { items: StoredFavorite[]; limit: number; hasMore: boolean; nextCursor: string | null; total: number };
-  getFavorites(userId: string, limit?: number, cursor?: string, verticalId: 'COCINA' | 'OFICIOS' = 'COCINA'): StoredFavorite[] | { items: StoredFavorite[]; limit: number; hasMore: boolean; nextCursor: string | null; total: number } {
-    const items = this.data.favorites.filter((f) => f.userId === userId && (this.getVideoById(f.videoId)?.verticalId || 'COCINA') === verticalId);
+  getFavorites(
+    userId: string,
+    limitOrVertical?: number | 'COCINA' | 'OFICIOS',
+    cursor?: string,
+    verticalId: 'COCINA' | 'OFICIOS' = 'COCINA',
+  ): StoredFavorite[] | { items: StoredFavorite[]; limit: number; hasMore: boolean; nextCursor: string | null; total: number } {
+    const isVerticalOnlyCall = typeof limitOrVertical === 'string';
+    const limit = isVerticalOnlyCall ? undefined : limitOrVertical;
+    const effectiveVertical = isVerticalOnlyCall ? limitOrVertical : verticalId;
+    const items = this.data.favorites.filter(
+      (f) => f.userId === userId && (this.getVideoById(f.videoId)?.verticalId || 'COCINA') === effectiveVertical,
+    );
     if (limit === undefined) return items;
     let startIndex = 0;
     if (cursor) {
