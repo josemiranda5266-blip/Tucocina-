@@ -221,7 +221,7 @@ export class YouTubeDiscoveryProvider implements ContentDiscoveryProvider {
       // Never return a candidate that does not belong to the selected vertical.
       // Generic instructional terms are shared by both verticals, so the
       // vertical-specific detector must gate the discovery result before scoring.
-      if (verticalId === 'COCINA' ? !cookingDetection.isCooking : !verticalDetection.isRelevant) {
+      if (verticalId === 'COCINA' ? (!cookingDetection.isCooking || verticalDetection.matchedExclusions.length > 0) : !verticalDetection.isRelevant) {
         continue;
       }
 
