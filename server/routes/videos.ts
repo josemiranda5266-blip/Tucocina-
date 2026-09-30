@@ -20,6 +20,7 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const limit = parseLimit(req.query.limit);
     const categoryId = typeof req.query.categoryId === 'string' ? req.query.categoryId.trim() : '';
+    const verticalId = req.query.verticalId === 'OFICIOS' ? 'OFICIOS' : req.query.verticalId === 'COCINA' ? 'COCINA' : '';
     const platform = typeof req.query.platform === 'string' ? req.query.platform.trim().toUpperCase() : '';
     const searchQuery = typeof req.query.q === 'string' ? req.query.q.toLowerCase().trim() : '';
     const sortBy = req.query.sortBy === 'views' ? 'views' : 'recent';
@@ -29,7 +30,7 @@ router.get('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: { code: 'INVALID_CURSOR', message: 'El cursor de paginación no es válido.' } });
     }
 
-    const result = dbStore.getVideos({ categoryId: categoryId || undefined, platform: platform || undefined, searchQuery: searchQuery || undefined, sortBy, cursor: cursor || undefined, limit });
+    const result = dbStore.getVideos({ verticalId: verticalId || undefined, categoryId: categoryId || undefined, platform: platform || undefined, searchQuery: searchQuery || undefined, sortBy, cursor: cursor || undefined, limit });
     return res.json(result);
   } catch {
     return res.status(500).json({ error: { code: 'FETCH_ERROR', message: 'Error al consultar el catálogo de videos' } });
