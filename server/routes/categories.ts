@@ -1,12 +1,27 @@
 import { Router, Request, Response } from 'express';
 import { getAdminFirestore } from '../auth/firebaseAdmin';
 import { INITIAL_CATEGORIES } from '../../src/domain/categories';
+import { getContentVertical } from '../services/content/verticals';
 
 const router = Router();
 
 // GET /api/categories
 router.get('/', async (req: Request, res: Response) => {
+  const verticalId = req.query.verticalId === 'OFICIOS' ? 'OFICIOS' : 'COCINA';
+  const vertical = getContentVertical(verticalId);
   try {
+    if (verticalId === 'OFICIOS') {
+      return res.json(vertical.categoryRules.map((rule, index) => ({
+        id: rule.id,
+        name: rule.name,
+        slug: rule.id.replace(/^of-/, '').toLowerCase(),
+        description: `Videos y tutoriales de ${rule.name.toLowerCase()}`,
+        icon: 'Wrench',
+        order: index + 1,
+        verticalId: 'OFICIOS',
+      })));
+    }
+
     const db = getAdminFirestore();
     const snapshot = await db.collection('categories').orderBy('order', 'asc').get();
 
