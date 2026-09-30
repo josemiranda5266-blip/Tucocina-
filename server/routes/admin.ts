@@ -60,7 +60,6 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
       embedUrl: extracted.embedUrl,
       platform: extracted.platform,
       platformVideoId: extracted.platformVideoId,
-      verticalId,
       thumbnailUrl: (customThumbnail && customThumbnail.trim()) ? customThumbnail.trim() : extracted.thumbnailUrl,
       creatorName: (customCreator && customCreator.trim()) ? customCreator.trim() : extracted.creatorName,
       creatorUrl: extracted.creatorUrl || '',
@@ -210,7 +209,7 @@ router.get('/metrics', async (req: AuthenticatedRequest, res: Response) => {
 
 /**
  * GET /api/admin/discovery/youtube
- * Search YouTube for cooking video candidates matching strict quality & view metrics.
+ * Search YouTube for candidates in the selected content vertical.
  */
 router.get('/discovery/youtube', discoveryLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -274,6 +273,7 @@ router.post('/discovery/import', async (req: AuthenticatedRequest, res: Response
       embedUrl: extracted.embedUrl,
       platform: extracted.platform,
       platformVideoId: extracted.platformVideoId,
+      verticalId,
       thumbnailUrl: extracted.thumbnailUrl,
       creatorName: extracted.creatorName,
       creatorUrl: extracted.creatorUrl || '',
