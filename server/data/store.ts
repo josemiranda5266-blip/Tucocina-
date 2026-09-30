@@ -10,6 +10,8 @@ export interface StoredVideo {
   embedUrl: string;
   platform: 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK' | 'FACEBOOK' | 'OTHER';
   platformVideoId: string;
+  /** Vertical of the content. Legacy videos without this field are treated as COCINA. */
+  verticalId?: 'COCINA' | 'OFICIOS';
   thumbnailUrl: string;
   creatorName: string;
   creatorUrl?: string;
@@ -217,9 +219,10 @@ class StoreManager {
     });
   }
 
-  getVideos(options: { status?: string; categoryId?: string; platform?: string; searchQuery?: string; sortBy?: 'recent' | 'views'; cursor?: string; limit?: number }) {
+  getVideos(options: { status?: string; categoryId?: string; platform?: string; verticalId?: 'COCINA' | 'OFICIOS'; searchQuery?: string; sortBy?: 'recent' | 'views'; cursor?: string; limit?: number }) {
     let items = [...this.data.videos];
     items = options.status ? items.filter((v) => v.status === options.status) : items.filter((v) => v.status === 'PUBLISHED');
+    if (options.verticalId) items = items.filter((v) => (v.verticalId || 'COCINA') === options.verticalId);
     if (options.categoryId) items = items.filter((v) => v.categoryId === options.categoryId);
     if (options.platform) items = items.filter((v) => v.platform === options.platform!.toUpperCase());
     if (options.searchQuery) items = items.filter((v) => matchesSearch(v, options.searchQuery!));
