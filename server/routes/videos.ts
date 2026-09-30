@@ -102,7 +102,7 @@ router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest,
 
 router.delete('/:id/comments/:commentId', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!requirePublishedVideo(req.params.id)) {
+    if (!requirePublishedVideo(req.params.id, parseVertical(req.query.verticalId))) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     }
 
