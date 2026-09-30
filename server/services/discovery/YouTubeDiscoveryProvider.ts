@@ -189,7 +189,7 @@ export class YouTubeDiscoveryProvider implements ContentDiscoveryProvider {
         continue; // Descartar si el creador bloqueó la reproducción integrada
       }
 
-      const title = snippet.title || 'Receta de cocina en YouTube';
+      const title = snippet.title || (verticalId === 'COCINA' ? 'Receta de cocina en YouTube' : 'Tutorial práctico en YouTube');
       const description = snippet.description || '';
       const channelTitle = snippet.channelTitle || 'Creador de YouTube';
       const publishedAt = snippet.publishedAt || new Date().toISOString();
@@ -281,7 +281,7 @@ export class YouTubeDiscoveryProvider implements ContentDiscoveryProvider {
         suggestedTags: classification.tags.length > 0 ? classification.tags : verticalId === 'COCINA' ? ['receta', 'fácil', 'casero'] : ['tutorial', 'paso a paso'],
         isEmbeddable,
         isSpanish,
-        isCooking: cookingDetection.isCooking,
+        isCooking: verticalId === 'COCINA' && cookingDetection.isCooking,
         youtubeCategoryId,
       };
 
