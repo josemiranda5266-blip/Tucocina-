@@ -56,3 +56,9 @@ export const CONTENT_VERTICALS: Record<ContentVerticalId, ContentVerticalDefinit
 export function getContentVertical(id: ContentVerticalId = 'COCINA'): ContentVerticalDefinition {
   return CONTENT_VERTICALS[id];
 }
+
+
+export function isCategoryInVertical(categoryId: string | null | undefined, verticalId: ContentVerticalId): boolean {
+  if (!categoryId) return true;
+  return getContentVertical(verticalId).categoryRules.some((rule) => rule.id === categoryId);
+}
