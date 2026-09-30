@@ -291,6 +291,19 @@ export const AdminVideos: React.FC = () => {
             <p className="text-sm text-stone-600 mt-1">Pegá hasta 25 enlaces públicos, uno por línea. Quedarán guardados como <strong>BORRADOR (DRAFT)</strong> para tu revisión.</p>
           </div>
         </div>
+        <div className="flex flex-col sm:flex-row gap-3 mb-3">
+          <label className="text-xs font-bold text-stone-700 flex items-center gap-2">
+            Vertical
+            <select
+              value={bulkVerticalId}
+              onChange={(e) => setBulkVerticalId(e.target.value as 'COCINA' | 'OFICIOS')}
+              className="bg-stone-50 border border-stone-300 rounded-lg px-3 py-2 text-xs"
+            >
+              <option value="COCINA">Cocina</option>
+              <option value="OFICIOS">Oficios</option>
+            </select>
+          </label>
+        </div>
         <textarea
           value={bulkUrls}
           onChange={(e) => setBulkUrls(e.target.value)}
