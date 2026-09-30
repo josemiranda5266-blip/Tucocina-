@@ -11,6 +11,9 @@ import {
   VideoPlatform,
 } from './ContentDiscoveryProvider';
 import { isSpanishCandidate } from './spanishCandidateDetector';
+import { ContentVerticalId, getContentVertical } from '../content/verticals';
+import { detectContentVertical } from '../content/detector';
+import { scoreContentCandidate } from '../content/scorer';
 import { isCookingCandidate } from './cookingCandidateDetector';
 import { scoreCookingVideoCandidate } from './cookingCandidateScorer';
 import { classifyVideo } from '../videoClassification';
@@ -44,7 +47,9 @@ export class YouTubeDiscoveryProvider implements ContentDiscoveryProvider {
 
   async searchCandidates(options: DiscoverySearchOptions = {}): Promise<DiscoverySearchResult> {
     const apiKey = this.getApiKey();
-    const query = (options.query || 'recetas fáciles').trim().slice(0, 100);
+    const verticalId: ContentVerticalId = options.verticalId || 'COCINA';
+    const vertical = getContentVertical(verticalId);
+    const query = (options.query || vertical.discoveryQueries[0]).trim().slice(0, 100);
     const limit = Math.min(Math.max(options.limit || 15, 1), 30);
     const minViews = typeof options.minViews === 'number' && options.minViews >= 0 ? options.minViews : 5000;
 
@@ -98,7 +103,7 @@ export class YouTubeDiscoveryProvider implements ContentDiscoveryProvider {
     }
 
     // Step 2: Fetch detailed metadata with videos.list
-    const candidates = await this.getVideoDetails(videoIds, minViews);
+    const candidates = await this.getVideoDetails(videoIds, minViews, verticalId);
 
     // Filter deduplication against database
     const newCandidates = candidates.filter((c) => {
@@ -122,10 +127,11 @@ export class YouTubeDiscoveryProvider implements ContentDiscoveryProvider {
       query,
       candidates: finalCandidates,
       totalFound: finalCandidates.length,
+      verticalId,
     };
   }
 
-  async getVideoDetails(videoIds: string[], minViews: number = 5000): Promise<VideoCandidate[]> {
+  async getVideoDetails(videoIds: string[], minViews: number = 5000, verticalId: ContentVerticalId = 'COCINA'): Promise<VideoCandidate[]> {
     if (videoIds.length === 0) return [];
 
     const apiKey = this.getApiKey();
@@ -198,27 +204,62 @@ export class YouTubeDiscoveryProvider implements ContentDiscoveryProvider {
       const durationSeconds = parseIso8601Duration(contentDetails.duration);
       const youtubeCategoryId = snippet.categoryId;
 
-      // Evaluation & Scoring
+      // Evaluation & classification use the historical cooking path by default.
+      // OFICIOS uses the same discovery pipeline with a vertical-specific detector/scorer.
       const isSpanish = isSpanishCandidate(title, description, channelTitle);
       const cookingDetection = isCookingCandidate(title, description, channelTitle);
+      const verticalDetection = detectContentVertical(
+        { title, description, creatorName: channelTitle },
+        verticalId
+      );
 
-      const scoreResult = scoreCookingVideoCandidate({
-        title,
-        description,
-        channelTitle,
-        views,
-        isEmbeddable,
-        isSpanish,
-        isCooking: cookingDetection.isCooking,
-        youtubeCategoryId,
-      });
+      const classification = classifyVideo(
+        { title, description, creatorName: channelTitle },
+        verticalId
+      );
 
-      // Auto-classification of category & tags
-      const classification = classifyVideo({ title, description, creatorName: channelTitle });
+      const scoreResult = verticalId === 'COCINA'
+        ? scoreCookingVideoCandidate({
+            title,
+            description,
+            channelTitle,
+            views,
+            isEmbeddable,
+            isSpanish,
+            verticalId,
+        isCooking: verticalId === 'COCINA' && cookingDetection.isCooking,
+            youtubeCategoryId,
+          })
+        : (() => {
+            const generic = scoreContentCandidate({
+              title,
+              description,
+              channelTitle,
+              views,
+              isEmbeddable,
+              isSpanish,
+              isRelevant: verticalDetection.isRelevant,
+              categoryMatched: Boolean(classification.categoryId),
+              verticalId,
+            });
+            return {
+              score: generic.score,
+              label: generic.label,
+              breakdown: {
+                ...generic.breakdown,
+                spanishScore: generic.breakdown.languageScore,
+              },
+            };
+          })();
+
       const matchedCat = INITIAL_CATEGORIES.find((c) => c.id === classification.categoryId);
       const suggestedCategory = matchedCat
         ? { id: matchedCat.id, name: matchedCat.name }
-        : { id: 'cat-argentina', name: 'Cocina argentina' };
+        : classification.categoryId && classification.categoryName
+          ? { id: classification.categoryId, name: classification.categoryName }
+          : verticalId === 'COCINA'
+            ? { id: 'cat-argentina', name: 'Cocina argentina' }
+            : { id: 'oficios', name: 'Oficios' };
 
       const candidate: VideoCandidate = {
         externalVideoId: videoId,
@@ -237,7 +278,7 @@ export class YouTubeDiscoveryProvider implements ContentDiscoveryProvider {
         scoreLabel: scoreResult.label,
         scoreBreakdown: scoreResult.breakdown,
         suggestedCategory,
-        suggestedTags: classification.tags.length > 0 ? classification.tags : ['receta', 'fácil', 'casero'],
+        suggestedTags: classification.tags.length > 0 ? classification.tags : verticalId === 'COCINA' ? ['receta', 'fácil', 'casero'] : ['tutorial', 'paso a paso'],
         isEmbeddable,
         isSpanish,
         isCooking: cookingDetection.isCooking,
