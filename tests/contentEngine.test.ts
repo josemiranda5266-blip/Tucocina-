@@ -22,3 +22,30 @@ test('detects a trade video independently from cooking', () => {
   assert.equal(result.isRelevant, true);
   assert.ok(result.matchedTerms.length > 0);
 });
+
+test('does not classify an obvious trade video as cooking', () => {
+  const result = classifyContent(
+    { title: 'Cómo instalar un tomacorriente y revisar el disyuntor' },
+    'COCINA',
+  );
+  assert.equal(result.confidence, 0);
+  assert.equal(result.categoryId, undefined);
+});
+
+test('does not classify an obvious cooking video as a trade', () => {
+  const result = classifyContent(
+    { title: 'Receta de empanadas caseras paso a paso' },
+    'OFICIOS',
+  );
+  assert.equal(result.confidence, 0);
+  assert.equal(result.categoryId, undefined);
+});
+
+test('explicit media exclusions override generic vertical matches', () => {
+  const result = detectContentVertical(
+    { title: 'Tutorial de cocina - reaction y gameplay' },
+    'COCINA',
+  );
+  assert.equal(result.isRelevant, false);
+  assert.ok(result.matchedExclusions.length > 0);
+});
