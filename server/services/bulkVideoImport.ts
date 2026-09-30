@@ -25,7 +25,16 @@ export async function importVideosInBulk(urls: string[], verticalId: 'COCINA' | 
       const extracted = await processExternalVideoUrl(url);
       const existing = dbStore.findDuplicate(extracted.platform, extracted.platformVideoId);
       if (existing) {
-        const classification = classifyVideo(extracted, verticalId);
+        results.push({
+          url,
+          status: 'DUPLICATE',
+          videoId: existing.id,
+          title: existing.title,
+        });
+        continue;
+      }
+
+      const classification = classifyVideo(extracted, verticalId);
         const now = new Date().toISOString();
         const videoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const dupVideo: StoredVideo = {
