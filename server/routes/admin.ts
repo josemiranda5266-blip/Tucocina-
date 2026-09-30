@@ -82,10 +82,14 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
       updatedAt: now,
     };
 
-    dbStore.addVideo(newVideo);
     if (existing) {
-      return res.status(201).json({ message: 'El video fue detectado como duplicado y guardado en la sección de Duplicados para revisión del administrador.', video: newVideo, isDuplicate: true });
+      return res.status(200).json({
+        message: 'El video ya existe en el catálogo y no se creó un segundo registro.',
+        video: existing,
+        isDuplicate: true,
+      });
     }
+    dbStore.addVideo(newVideo);
     return res.status(201).json({ message: 'Video importado con éxito como Borrador (DRAFT)', video: newVideo });
   } catch (error: any) {
     if (error.name === 'ZodError') return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: error.errors[0]?.message || 'URL inválida' } });
@@ -406,17 +410,16 @@ router.post('/discovery/import-batch', async (req: AuthenticatedRequest, res: Re
           updatedAt: now,
         };
 
-        dbStore.addVideo(newVideo);
-
         if (existing) {
           results.push({
             videoId: item.videoId,
             status: 'DUPLICATE',
-            importedVideoId: newVideo.id,
-            title: newVideo.title,
+            importedVideoId: existing.id,
+            title: existing.title,
           });
           continue;
         }
+        dbStore.addVideo(newVideo);
 
         results.push({
           videoId: item.videoId,
