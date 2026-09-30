@@ -53,7 +53,7 @@ test('explicit media exclusions override generic vertical matches', () => {
 
 
 test('rejects known cooking-only tags on trades', () => {
-  assert.deepEqual(getInvalidTagsForVertical(['tutorial', 'air fryer', 'herramientas'], 'OFICIOS'), []);
+  assert.deepEqual(getInvalidTagsForVertical(['tutorial', 'herramientas'], 'OFICIOS'), []);
   assert.deepEqual(getInvalidTagsForVertical(['air fryer', 'sin gluten'], 'OFICIOS'), ['air fryer', 'sin gluten']);
 });
 
