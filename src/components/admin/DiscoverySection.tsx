@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../../services/api';
 import { VideoPlayer } from '../VideoPlayer';
-import { Video } from '../../types';
+import { Video, ContentVerticalId } from '../../types';
 import {
   Search,
   Sparkles,
@@ -40,6 +40,7 @@ interface DiscoveryCandidate {
   isEmbeddable: boolean;
   isSpanish: boolean;
   isCooking: boolean;
+  verticalId?: ContentVerticalId;
 }
 
 interface DiscoverySectionProps {
@@ -69,6 +70,7 @@ function formatDate(isoStr: string): string {
 }
 
 export const DiscoverySection: React.FC<DiscoverySectionProps> = ({ onImportSuccess }) => {
+  const [verticalId, setVerticalId] = useState<ContentVerticalId>('COCINA');
   const [query, setQuery] = useState('recetas fáciles');
   const [limit, setLimit] = useState(15);
   const [minViews, setMinViews] = useState(5000);
@@ -107,6 +109,7 @@ export const DiscoverySection: React.FC<DiscoverySectionProps> = ({ onImportSucc
         limit,
         minViews,
         sortBy,
+        verticalId,
       });
 
       setIsConfigured(result.isConfigured);
@@ -155,7 +158,8 @@ export const DiscoverySection: React.FC<DiscoverySectionProps> = ({ onImportSucc
       await api.adminImportDiscoveryCandidate(
         candidate.externalVideoId,
         candidate.suggestedCategory.id,
-        candidate.suggestedTags
+        candidate.suggestedTags,
+        verticalId
       );
       setImportedVideoIds((prev) => new Set(prev).add(candidate.externalVideoId));
       showToast(`¡Video "${candidate.title.slice(0, 35)}..." importado a Borrador (DRAFT)!`);
@@ -180,6 +184,7 @@ export const DiscoverySection: React.FC<DiscoverySectionProps> = ({ onImportSucc
         const cand = candidates.find((c) => c.externalVideoId === id);
         return {
           videoId: id,
+          verticalId,
           categoryId: cand?.suggestedCategory.id,
           tags: cand?.suggestedTags,
         };
@@ -221,13 +226,18 @@ export const DiscoverySection: React.FC<DiscoverySectionProps> = ({ onImportSucc
             <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-xl shadow-md">
               <Sparkles className="w-5 h-5" />
             </div>
-            <h2 className="text-xl font-bold text-stone-100 tracking-tight">DESCUBRIR VIDEOS DE COCINA</h2>
+            <h2 className="text-xl font-bold text-stone-100 tracking-tight">DESCUBRIR VIDEOS</h2>
           </div>
           <p className="text-xs text-stone-400 mt-1">
-            Búsqueda automática en la API oficial de YouTube. Encuentra candidatos relevantes en español con +5.000 vistas.
+            Búsqueda automática en la API oficial de YouTube según la vertical seleccionada.
           </p>
         </div>
 
+        <div className="flex items-center gap-2">
+        <select value={verticalId} onChange={(e) => { const next = e.target.value as ContentVerticalId; setVerticalId(next); setQuery(next === 'COCINA' ? 'recetas fáciles' : 'electricidad paso a paso'); setCandidates([]); setSelectedVideoIds(new Set()); }} className="bg-stone-950 border border-stone-700 rounded-xl px-3 py-2 text-sm text-stone-200">
+          <option value="COCINA">Cocina</option>
+          <option value="OFICIOS">Oficios</option>
+        </select>
         <button
           onClick={handleSearch}
           disabled={loading}
@@ -241,7 +251,7 @@ export const DiscoverySection: React.FC<DiscoverySectionProps> = ({ onImportSucc
           ) : (
             <>
               <Search className="w-5 h-5" />
-              <span>🔎 BUSCAR VIDEOS DE COCINA</span>
+              <span>🔎 BUSCAR VIDEOS</span>
             </>
           )}
         </button>
