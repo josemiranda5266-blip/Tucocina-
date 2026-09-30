@@ -347,10 +347,10 @@ class StoreManager {
 
   isFavorite(userId: string, videoId: string): boolean { return this.data.favorites.some((f) => f.userId === userId && f.videoId === videoId); }
 
-  getFavorites(userId: string): StoredFavorite[];
-  getFavorites(userId: string, limit: number, cursor?: string): { items: StoredFavorite[]; limit: number; hasMore: boolean; nextCursor: string | null; total: number };
-  getFavorites(userId: string, limit?: number, cursor?: string): StoredFavorite[] | { items: StoredFavorite[]; limit: number; hasMore: boolean; nextCursor: string | null; total: number } {
-    const items = this.data.favorites.filter((f) => f.userId === userId);
+  getFavorites(userId: string, verticalId?: 'COCINA' | 'OFICIOS'): StoredFavorite[];
+  getFavorites(userId: string, limit: number, cursor?: string, verticalId?: 'COCINA' | 'OFICIOS'): { items: StoredFavorite[]; limit: number; hasMore: boolean; nextCursor: string | null; total: number };
+  getFavorites(userId: string, limit?: number, cursor?: string, verticalId: 'COCINA' | 'OFICIOS' = 'COCINA'): StoredFavorite[] | { items: StoredFavorite[]; limit: number; hasMore: boolean; nextCursor: string | null; total: number } {
+    const items = this.data.favorites.filter((f) => f.userId === userId && (this.getVideoById(f.videoId)?.verticalId || 'COCINA') === verticalId);
     if (limit === undefined) return items;
     let startIndex = 0;
     if (cursor) {
