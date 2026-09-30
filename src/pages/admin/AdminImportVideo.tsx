@@ -54,10 +54,13 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    api.getCategories()
-      .then(setCategories)
+    api.getCategories(verticalId)
+      .then((loaded) => {
+        setCategories(loaded);
+        setEditCategory((current) => current && loaded.some((cat) => cat.id === current) ? current : (loaded[0]?.id || ''));
+      })
       .catch((err) => console.error('Error al cargar categorías:', err));
-  }, []);
+  }, [verticalId]);
 
   const handleImport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +84,7 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
       setEditTitle(preTitle.trim() || video.title);
       setEditCreator(video.creatorName || '');
       setEditDesc(video.description || '');
-      setEditCategory(video.categoryId || 'cat-carnes');
+      setEditCategory(video.categoryId || categories[0]?.id || '');
       setEditThumbnail(video.thumbnailUrl || CULINARY_THUMBNAILS[0].url);
       setEditTags((video.tags || []).join(', '));
 
@@ -130,7 +133,7 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
       setImportedVideo(updated);
       setSuccessMsg(
         targetStatus === 'PUBLISHED'
-          ? `¡Receta publicada con éxito en el catálogo con el título "${updated.title}"!`
+          ? `¡Video publicado con éxito en el catálogo con el título "${updated.title}"!`
           : 'Cambios guardados correctamente.'
       );
     } catch (err: any) {
@@ -216,13 +219,13 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
 
             <div>
               <label className="block text-xs font-bold text-stone-700 mb-1">
-                Título del plato <span className="text-stone-400 font-normal">(opcional)</span>
+                Título del video <span className="text-stone-400 font-normal">(opcional)</span>
               </label>
               <input
                 type="text"
                 value={preTitle}
                 onChange={(e) => setPreTitle(e.target.value)}
-                placeholder="Ej: Empanadas criollas"
+                placeholder={verticalId === 'COCINA' ? 'Ej: Empanadas criollas' : 'Ej: Instalar un tomacorriente'}
                 className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:bg-white transition-all"
               />
             </div>
@@ -303,7 +306,7 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
                 <div>
                   <p className="font-bold text-sm text-amber-950 mb-0.5">Título genérico de Instagram detectado</p>
                   <p className="leading-relaxed">
-                    Escribí el nombre real de tu plato abajo (ej: <em>Milanesas Napolitanas</em> o <em>Pasta con Salsa Pesto</em>). El nuevo título se trasladará y guardará automáticamente al hacer clic en <strong>Publicar</strong>.
+                    Escribí el nombre real de tu plato abajo (ej: <em>Milanesas Napolitanas</em> o <em>Pasta con Salsa Pesto</em>). El nuevo título se guardará automáticamente al hacer clic en <strong>Publicar</strong>.
                   </p>
                 </div>
               </div>
@@ -362,7 +365,7 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
                   {/* Title Field */}
                   <div>
                     <label className="block text-xs font-bold text-stone-800 mb-1">
-                      Título de la Receta <span className="text-amber-600">*</span>
+                      Título del video <span className="text-amber-600">*</span>
                     </label>
                     <input
                       type="text"
@@ -379,7 +382,7 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
                   {/* Creator & Category Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-stone-700 mb-1">Canal o Chef Creador</label>
+                      <label className="block text-xs font-bold text-stone-700 mb-1">Canal o creador</label>
                       <input
                         type="text"
                         value={editCreator}
@@ -390,7 +393,7 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-stone-700 mb-1">Categoría Gastronómica</label>
+                      <label className="block text-xs font-bold text-stone-700 mb-1">Categoría</label>
                       <select
                         value={editCategory}
                         onChange={(e) => setEditCategory(e.target.value)}
@@ -408,13 +411,13 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
                   {/* Description */}
                   <div>
                     <label className="block text-xs font-bold text-stone-700 mb-1">
-                      Descripción de la receta y pasos
+                      Descripción y pasos
                     </label>
                     <textarea
                       rows={3}
                       value={editDesc}
                       onChange={(e) => setEditDesc(e.target.value)}
-                      placeholder="Ingredientes, consejos de cocción y técnica..."
+                      placeholder="Descripción, materiales, herramientas y técnica..."
                       className="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-600"
                     />
                   </div>
