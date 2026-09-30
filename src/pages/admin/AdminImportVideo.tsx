@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
-import { Video, Category } from '../../types';
+import { Video, Category, ContentVerticalId } from '../../types';
 import { VideoPlayer } from '../../components/VideoPlayer';
 import { VideoCard } from '../../components/VideoCard';
 import {
@@ -33,6 +33,7 @@ const CULINARY_THUMBNAILS = [
 ];
 
 export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelect }) => {
+  const [verticalId, setVerticalId] = useState<ContentVerticalId>('COCINA');
   const [url, setUrl] = useState('');
   const [preTitle, setPreTitle] = useState('');
   const [loading, setLoading] = useState(false);
@@ -189,6 +190,13 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1">Vertical</label>
+              <select value={verticalId} onChange={(e) => setVerticalId(e.target.value as ContentVerticalId)} className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:bg-white">
+                <option value="COCINA">Cocina</option>
+                <option value="OFICIOS">Oficios</option>
+              </select>
+            </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-bold text-stone-700 mb-1">
                 URL del Video Original <span className="text-amber-600">*</span>
