@@ -42,8 +42,18 @@ router.get('/', async (req: Request, res: Response) => {
       .filter((category) => allowedIds.has(category.id));
     res.json(categories);
   } catch (error: any) {
-    // Return initial local categories list if Firestore is uninitialized
-    res.json(INITIAL_CATEGORIES);
+    if (verticalId === 'OFICIOS') {
+      return res.json(vertical.categoryRules.map((rule, index) => ({
+        id: rule.id,
+        name: rule.name,
+        slug: rule.id.replace(/^of-/, '').toLowerCase(),
+        description: `Videos y tutoriales de ${rule.name.toLowerCase()}`,
+        icon: 'Wrench',
+        order: index + 1,
+        verticalId: 'OFICIOS',
+      })));
+    }
+    return res.json(INITIAL_CATEGORIES);
   }
 });
 
