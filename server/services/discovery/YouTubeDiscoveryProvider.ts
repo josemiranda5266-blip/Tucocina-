@@ -226,8 +226,7 @@ export class YouTubeDiscoveryProvider implements ContentDiscoveryProvider {
             views,
             isEmbeddable,
             isSpanish,
-            verticalId,
-        isCooking: verticalId === 'COCINA' && cookingDetection.isCooking,
+            isCooking: cookingDetection.isCooking,
             youtubeCategoryId,
           })
         : (() => {
