@@ -376,8 +376,8 @@ class StoreManager {
   getComments(videoId: string): StoredComment[] { return this.data.comments.filter((c) => c.videoId === videoId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()); }
 
   /** Deletes a comment only when the authenticated actor owns it or is an admin. */
-  deleteComment(id: string, actorUserId: string, isAdmin: boolean): boolean {
-    const comment = this.data.comments.find((c) => c.id === id);
+  deleteComment(id: string, videoId: string, actorUserId: string, isAdmin: boolean): boolean {
+    const comment = this.data.comments.find((c) => c.id === id && c.videoId === videoId);
     if (!comment) return false;
     if (!isAdmin && comment.userId !== actorUserId) return false;
     this.data.comments = this.data.comments.filter((c) => c.id !== id);
