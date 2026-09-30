@@ -141,6 +141,14 @@ router.patch('/videos/:id', async (req: AuthenticatedRequest, res: Response) => 
 
     if (updates.status === 'PUBLISHED') {
       const merged = { ...doc, ...updates };
+      const mergedVertical = merged.verticalId || 'COCINA';
+      const mergedInvalidTags = getInvalidTagsForVertical(merged.tags, mergedVertical);
+      if (mergedInvalidTags.length) {
+        return res.status(400).json({ error: { code: 'INVALID_TAGS_FOR_VERTICAL', message: `No se puede publicar: hay etiquetas de otra vertical: ${mergedInvalidTags.join(', ')}` } });
+      }
+      if (!isCategoryInVertical(merged.categoryId, mergedVertical)) {
+        return res.status(400).json({ error: { code: 'INVALID_CATEGORY_FOR_VERTICAL', message: 'No se puede publicar: la categoría no pertenece a la vertical del video.' } });
+      }
       const missing = ['title', 'originalUrl', 'embedUrl', 'platform'].filter((field) => !String((merged as any)[field] || '').trim());
       if (missing.length) return res.status(400).json({ error: { code: 'PUBLISH_REQUIRES_METADATA', message: `No se puede publicar: falta ${missing.join(', ')}` } });
     }
