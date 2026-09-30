@@ -60,6 +60,7 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
       embedUrl: extracted.embedUrl,
       platform: extracted.platform,
       platformVideoId: extracted.platformVideoId,
+      verticalId,
       thumbnailUrl: (customThumbnail && customThumbnail.trim()) ? customThumbnail.trim() : extracted.thumbnailUrl,
       creatorName: (customCreator && customCreator.trim()) ? customCreator.trim() : extracted.creatorName,
       creatorUrl: extracted.creatorUrl || '',
@@ -250,7 +251,7 @@ router.get('/discovery/youtube', discoveryLimiter, async (req: AuthenticatedRequ
  */
 router.post('/discovery/import', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { videoId, categoryId: customCategoryId, tags: customTags } = discoverySingleImportSchema.parse(req.body);
+    const { videoId, verticalId, categoryId: customCategoryId, tags: customTags } = discoverySingleImportSchema.parse(req.body);
 
     const safeUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const extracted = await processExternalVideoUrl(safeUrl);
@@ -260,7 +261,7 @@ router.post('/discovery/import', async (req: AuthenticatedRequest, res: Response
       title: extracted.title,
       description: extracted.description,
       creatorName: extracted.creatorName,
-    });
+    }, verticalId);
 
     const newVideoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const now = new Date().toISOString();
@@ -337,7 +338,7 @@ router.post('/discovery/import-batch', async (req: AuthenticatedRequest, res: Re
           title: extracted.title,
           description: extracted.description,
           creatorName: extracted.creatorName,
-        });
+        }, item.verticalId);
 
         const newVideoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const now = new Date().toISOString();
@@ -350,6 +351,7 @@ router.post('/discovery/import-batch', async (req: AuthenticatedRequest, res: Re
           embedUrl: extracted.embedUrl,
           platform: extracted.platform,
           platformVideoId: extracted.platformVideoId,
+          verticalId: item.verticalId,
           thumbnailUrl: extracted.thumbnailUrl,
           creatorName: extracted.creatorName,
           creatorUrl: extracted.creatorUrl || '',
