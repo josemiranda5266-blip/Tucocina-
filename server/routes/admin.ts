@@ -35,6 +35,7 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
   try {
     const {
       url,
+      verticalId,
       title: customTitle,
       description: customDescription,
       thumbnailUrl: customThumbnail,
@@ -47,7 +48,7 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
       title: customTitle || extracted.title,
       description: customDescription || extracted.description,
       creatorName: customCreator || extracted.creatorName,
-    });
+    }, verticalId);
 
     const existing = dbStore.findDuplicate(extracted.platform, extracted.platformVideoId);
     const videoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -60,6 +61,7 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
       embedUrl: extracted.embedUrl,
       platform: extracted.platform,
       platformVideoId: extracted.platformVideoId,
+      verticalId,
       thumbnailUrl: (customThumbnail && customThumbnail.trim()) ? customThumbnail.trim() : extracted.thumbnailUrl,
       creatorName: (customCreator && customCreator.trim()) ? customCreator.trim() : extracted.creatorName,
       creatorUrl: extracted.creatorUrl || '',
