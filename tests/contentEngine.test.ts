@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { classifyContent } from '../server/services/content/classifier';
 import { detectContentVertical } from '../server/services/content/detector';
+import { getInvalidTagsForVertical } from '../server/services/content/verticals';
 
 test('classifies cooking content without changing the cooking taxonomy', () => {
   const result = classifyContent({ title: 'Cómo hacer una torta de chocolate fácil' }, 'COCINA');
@@ -48,4 +49,14 @@ test('explicit media exclusions override generic vertical matches', () => {
   );
   assert.equal(result.isRelevant, false);
   assert.ok(result.matchedExclusions.length > 0);
+});
+
+
+test('rejects known cooking-only tags on trades', () => {
+  assert.deepEqual(getInvalidTagsForVertical(['tutorial', 'air fryer', 'herramientas'], 'OFICIOS'), []);
+  assert.deepEqual(getInvalidTagsForVertical(['air fryer', 'sin gluten'], 'OFICIOS'), ['air fryer', 'sin gluten']);
+});
+
+test('rejects known trade-only tags on cooking', () => {
+  assert.deepEqual(getInvalidTagsForVertical(['receta', 'tutorial', 'mantenimiento'], 'COCINA'), ['tutorial', 'mantenimiento']);
 });
