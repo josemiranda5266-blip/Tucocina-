@@ -11,16 +11,20 @@ function parseLimit(value: unknown, fallback = 12): number {
   return Number.isFinite(parsed) ? Math.min(MAX_PAGE_SIZE, Math.max(1, parsed)) : fallback;
 }
 
-function requirePublishedVideo(videoId: string) {
+function parseVertical(value: unknown): 'COCINA' | 'OFICIOS' {
+  return value === 'OFICIOS' ? 'OFICIOS' : 'COCINA';
+}
+
+function requirePublishedVideo(videoId: string, verticalId: 'COCINA' | 'OFICIOS' = 'COCINA') {
   const video = dbStore.getVideoById(videoId);
-  return video && video.status === 'PUBLISHED' ? video : null;
+  return video && video.status === 'PUBLISHED' && (video.verticalId || 'COCINA') === verticalId ? video : null;
 }
 
 router.get('/', async (req: Request, res: Response) => {
   try {
     const limit = parseLimit(req.query.limit);
     const categoryId = typeof req.query.categoryId === 'string' ? req.query.categoryId.trim() : '';
-    const verticalId = req.query.verticalId === 'OFICIOS' ? 'OFICIOS' : req.query.verticalId === 'COCINA' ? 'COCINA' : '';
+    const verticalId = parseVertical(req.query.verticalId);
     const platform = typeof req.query.platform === 'string' ? req.query.platform.trim().toUpperCase() : '';
     const searchQuery = typeof req.query.q === 'string' ? req.query.q.toLowerCase().trim() : '';
     const sortBy = req.query.sortBy === 'views' ? 'views' : 'recent';
@@ -30,7 +34,7 @@ router.get('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: { code: 'INVALID_CURSOR', message: 'El cursor de paginación no es válido.' } });
     }
 
-    const result = dbStore.getVideos({ verticalId: verticalId || undefined, categoryId: categoryId || undefined, platform: platform || undefined, searchQuery: searchQuery || undefined, sortBy, cursor: cursor || undefined, limit });
+    const result = dbStore.getVideos({ verticalId, categoryId: categoryId || undefined, platform: platform || undefined, searchQuery: searchQuery || undefined, sortBy, cursor: cursor || undefined, limit });
     return res.json(result);
   } catch {
     return res.status(500).json({ error: { code: 'FETCH_ERROR', message: 'Error al consultar el catálogo de videos' } });
@@ -39,7 +43,7 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const video = requirePublishedVideo(req.params.id);
+    const video = requirePublishedVideo(req.params.id, parseVertical(req.query.verticalId));
     if (!video) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     return res.json(video);
   } catch {
@@ -49,7 +53,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 router.get('/:id/comments', async (req: Request, res: Response) => {
   try {
-    if (!requirePublishedVideo(req.params.id)) {
+    if (!requirePublishedVideo(req.params.id, parseVertical(req.query.verticalId))) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     }
     return res.json({ comments: dbStore.getComments(req.params.id) });
@@ -61,7 +65,7 @@ router.get('/:id/comments', async (req: Request, res: Response) => {
 router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const videoId = req.params.id;
-    if (!requirePublishedVideo(videoId)) {
+    if (!requirePublishedVideo(videoId, parseVertical(req.query.verticalId))) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
     }
 
