@@ -21,6 +21,7 @@ export const CONTENT_VERTICALS: Record<ContentVerticalId, ContentVerticalDefinit
       {id:'cat-carnes',name:'Carnes',terms:['carne','asado','bife','costilla','milanesa','hamburguesa','cerdo','cordero']},
       {id:'cat-pollo',name:'Pollo',terms:['pollo','pechuga','alitas','alita']},
       {id:'cat-pastas',name:'Pastas',terms:['pasta','fideos','spaghetti','espagueti','ravioles','ñoquis','gnocchi','lasagna','lasaña']},
+      {id:'cat-arroces',name:'Arroces',terms:['arroz','paella','risotto','risotto','arroz con pollo']},
       {id:'cat-panaderia',name:'Panadería',terms:['pan','panadería','panaderia','factura','medialuna','croissant']},
       {id:'cat-postres',name:'Postres',terms:['torta','pastel','budín','budin','flan','helado','galleta','cookie','brownie','postre','cheesecake']},
       {id:'cat-ensaladas',name:'Ensaladas',terms:['ensalada','ensaladas']},
