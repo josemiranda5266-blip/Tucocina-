@@ -14,7 +14,7 @@ import { importVideosInBulk } from '../services/bulkVideoImport';
 import { YouTubeDiscoveryProvider } from '../services/discovery';
 import { purgeOriginDeletedVideos } from '../services/originCheck';
 import { dbStore, StoredVideo } from '../data/store';
-import { isCategoryInVertical } from '../services/content/verticals';
+import { getInvalidTagsForVertical, isCategoryInVertical } from '../services/content/verticals';
 
 const router = Router();
 const MAX_PAGE_SIZE = 50;
@@ -44,6 +44,10 @@ router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) =
       categoryId: customCategoryId,
       tags: customTags,
     } = ImportVideoSchema.parse(req.body);
+    const invalidTags = getInvalidTagsForVertical(customTags, verticalId);
+    if (invalidTags.length) {
+      return res.status(400).json({ error: { code: 'INVALID_TAGS_FOR_VERTICAL', message: `Las etiquetas no pertenecen a la vertical seleccionada: ${invalidTags.join(', ')}` } });
+    }
     if (!isCategoryInVertical(customCategoryId, verticalId)) {
       return res.status(400).json({ error: { code: 'INVALID_CATEGORY_FOR_VERTICAL', message: 'La categoría no pertenece a la vertical seleccionada.' } });
     }
@@ -125,7 +129,13 @@ router.patch('/videos/:id', async (req: AuthenticatedRequest, res: Response) => 
     const doc = dbStore.getVideoById(videoId);
     if (!doc) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Video no encontrado' } });
 
-    if (!isCategoryInVertical(updates.categoryId, doc.verticalId || 'COCINA')) {
+    const videoVertical = doc.verticalId || 'COCINA';
+    const invalidTags = getInvalidTagsForVertical(updates.tags, videoVertical);
+    if (invalidTags.length) {
+      return res.status(400).json({ error: { code: 'INVALID_TAGS_FOR_VERTICAL', message: `Las etiquetas no pertenecen a la vertical del video: ${invalidTags.join(', ')}` } });
+    }
+
+    if (!isCategoryInVertical(updates.categoryId, videoVertical)) {
       return res.status(400).json({ error: { code: 'INVALID_CATEGORY_FOR_VERTICAL', message: 'La categoría no pertenece a la vertical del video.' } });
     }
 
