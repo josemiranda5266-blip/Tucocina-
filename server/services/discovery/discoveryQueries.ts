@@ -1,33 +1,16 @@
-/**
- * Centralized list of culinary discovery queries.
- * Designed for targeted Spanish & Latin American cooking content discovery.
- */
-
-export const DISCOVERY_QUERIES: string[] = [
-  'recetas fáciles',
-  'recetas argentinas',
-  'cocina argentina',
-  'cómo hacer empanadas',
-  'cómo hacer pizza',
-  'recetas de pollo',
-  'recetas de carne',
-  'recetas de pasta',
-  'recetas fáciles y rápidas',
-  'postres fáciles',
-  'tortas fáciles',
-  'pan casero',
-  'cocina casera',
-  'recetas tradicionales',
-  'comida casera',
-  'asado criollo paso a paso',
-  'locro criollo tradicional',
-  'comida saludable fácil',
-];
+import { ContentVerticalId, getContentVertical } from '../content/verticals';
 
 /**
- * Returns a subset of queries to preserve YouTube API quota while keeping search varied.
+ * Discovery queries are part of the selected vertical, not of the YouTube provider.
+ * COCINA remains the default to preserve the existing CociFlash behavior.
  */
-export function getRotationQueries(count: number = 3): string[] {
-  const shuffled = [...DISCOVERY_QUERIES].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, Math.min(count, DISCOVERY_QUERIES.length));
+export function getDiscoveryQueries(verticalId: ContentVerticalId = 'COCINA'): string[] {
+  return getContentVertical(verticalId).discoveryQueries;
+}
+
+export const DISCOVERY_QUERIES: string[] = getDiscoveryQueries('COCINA');
+
+export function getRotationQueries(count: number = 3, verticalId: ContentVerticalId = 'COCINA'): string[] {
+  const queries = getDiscoveryQueries(verticalId);
+  return [...queries].sort(() => 0.5 - Math.random()).slice(0, Math.min(count, queries.length));
 }
