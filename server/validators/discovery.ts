@@ -5,11 +5,13 @@ export const discoveryQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(30).default(15),
   minViews: z.coerce.number().int().min(0).max(100000000).default(5000),
   sortBy: z.enum(['relevance', 'views', 'score', 'date']).default('score'),
+  verticalId: z.enum(['COCINA', 'OFICIOS']).default('COCINA'),
 });
 
 export const discoverySingleImportSchema = z.object({
   videoId: z.string().trim().regex(/^[a-zA-Z0-9_-]{11}$/, 'ID de video de YouTube inválido'),
   platform: z.literal('YOUTUBE').default('YOUTUBE'),
+  verticalId: z.enum(['COCINA', 'OFICIOS']).default('COCINA'),
   categoryId: z.string().trim().optional().nullable(),
   tags: z.array(z.string().trim()).max(10).optional(),
 });
@@ -18,6 +20,7 @@ export const discoveryBatchImportSchema = z.object({
   items: z.array(
     z.object({
       videoId: z.string().trim().regex(/^[a-zA-Z0-9_-]{11}$/, 'ID de video de YouTube inválido'),
+      verticalId: z.enum(['COCINA', 'OFICIOS']).default('COCINA'),
       categoryId: z.string().trim().optional().nullable(),
       tags: z.array(z.string().trim()).max(10).optional(),
     })
