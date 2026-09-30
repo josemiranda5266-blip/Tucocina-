@@ -30,8 +30,11 @@ router.get('/', async (req: Request, res: Response) => {
     const sortBy = req.query.sortBy === 'views' ? 'views' : 'recent';
     const cursor = typeof req.query.cursor === 'string' ? req.query.cursor.trim() : '';
 
-    if (cursor && !dbStore.getVideoById(cursor)) {
-      return res.status(400).json({ error: { code: 'INVALID_CURSOR', message: 'El cursor de paginación no es válido.' } });
+    if (cursor) {
+      const cursorVideo = dbStore.getVideoById(cursor);
+      if (!cursorVideo || cursorVideo.status !== 'PUBLISHED' || (cursorVideo.verticalId || 'COCINA') !== verticalId) {
+        return res.status(400).json({ error: { code: 'INVALID_CURSOR', message: 'El cursor de paginación no pertenece al catálogo solicitado.' } });
+      }
     }
 
     const result = dbStore.getVideos({ verticalId, categoryId: categoryId || undefined, platform: platform || undefined, searchQuery: searchQuery || undefined, sortBy, cursor: cursor || undefined, limit });
@@ -110,7 +113,7 @@ router.delete('/:id/comments/:commentId', authenticateUser, async (req: Authenti
     if (!userId) return res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Autenticación requerida' } });
 
     const isAdmin = req.user?.role === 'ADMIN' || req.user?.admin === true;
-    if (!dbStore.deleteComment(req.params.commentId, userId, isAdmin)) {
+    if (!dbStore.deleteComment(req.params.commentId, req.params.id, userId, isAdmin)) {
       return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'No tienes permisos para eliminar este comentario o no fue encontrado.' } });
     }
 
