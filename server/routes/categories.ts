@@ -36,7 +36,10 @@ router.get('/', async (req: Request, res: Response) => {
       return res.json(INITIAL_CATEGORIES);
     }
 
-    const categories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const allowedIds = new Set(vertical.categoryRules.map((rule) => rule.id));
+    const categories = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter((category) => allowedIds.has(category.id));
     res.json(categories);
   } catch (error: any) {
     // Return initial local categories list if Firestore is uninitialized
