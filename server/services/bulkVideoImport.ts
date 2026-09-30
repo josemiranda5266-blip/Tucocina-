@@ -14,7 +14,7 @@ export interface BulkImportResult {
 
 const MAX_BULK_ITEMS = 25;
 
-export async function importVideosInBulk(urls: string[]): Promise<BulkImportResult[]> {
+export async function importVideosInBulk(urls: string[], verticalId: 'COCINA' | 'OFICIOS' = 'COCINA'): Promise<BulkImportResult[]> {
   const uniqueUrls = [...new Set(urls.map(url => url.trim()).filter(Boolean))].slice(0, MAX_BULK_ITEMS);
   const results: BulkImportResult[] = [];
 
@@ -25,7 +25,7 @@ export async function importVideosInBulk(urls: string[]): Promise<BulkImportResu
       const extracted = await processExternalVideoUrl(url);
       const existing = dbStore.findDuplicate(extracted.platform, extracted.platformVideoId);
       if (existing) {
-        const classification = classifyVideo(extracted);
+        const classification = classifyVideo(extracted, verticalId);
         const now = new Date().toISOString();
         const videoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const dupVideo: StoredVideo = {
@@ -36,6 +36,7 @@ export async function importVideosInBulk(urls: string[]): Promise<BulkImportResu
           embedUrl: extracted.embedUrl,
           platform: extracted.platform,
           platformVideoId: extracted.platformVideoId,
+          verticalId,
           thumbnailUrl: extracted.thumbnailUrl,
           creatorName: extracted.creatorName,
           creatorUrl: extracted.creatorUrl || '',
@@ -52,7 +53,7 @@ export async function importVideosInBulk(urls: string[]): Promise<BulkImportResu
         continue;
       }
 
-      const classification = classifyVideo(extracted);
+      const classification = classifyVideo(extracted, verticalId);
       const now = new Date().toISOString();
       const videoId = `vid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const video: StoredVideo = {
@@ -63,6 +64,7 @@ export async function importVideosInBulk(urls: string[]): Promise<BulkImportResu
         embedUrl: extracted.embedUrl,
         platform: extracted.platform,
         platformVideoId: extracted.platformVideoId,
+        verticalId,
         thumbnailUrl: extracted.thumbnailUrl,
         creatorName: extracted.creatorName,
         creatorUrl: extracted.creatorUrl || '',
