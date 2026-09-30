@@ -272,6 +272,10 @@ router.post('/discovery/import', async (req: AuthenticatedRequest, res: Response
   try {
     const { videoId, verticalId, categoryId: customCategoryId, tags: customTags } = discoverySingleImportSchema.parse(req.body);
 
+    const invalidTags = getInvalidTagsForVertical(customTags, verticalId);
+    if (invalidTags.length) {
+      return res.status(400).json({ error: { code: 'INVALID_TAGS_FOR_VERTICAL', message: `Las etiquetas no pertenecen a la vertical seleccionada: ${invalidTags.join(', ')}` } });
+    }
     if (!isCategoryInVertical(customCategoryId, verticalId)) {
       return res.status(400).json({ error: { code: 'INVALID_CATEGORY_FOR_VERTICAL', message: 'La categoría no pertenece a la vertical seleccionada.' } });
     }
@@ -353,6 +357,10 @@ router.post('/discovery/import-batch', async (req: AuthenticatedRequest, res: Re
 
     for (const item of items) {
       try {
+        const invalidTags = getInvalidTagsForVertical(item.tags, item.verticalId);
+        if (invalidTags.length) {
+          throw new Error(`Las etiquetas no pertenecen a la vertical seleccionada: ${invalidTags.join(', ')}`);
+        }
         if (!isCategoryInVertical(item.categoryId, item.verticalId)) {
           throw new Error('La categoría no pertenece a la vertical seleccionada.');
         }
