@@ -62,3 +62,17 @@ export function isCategoryInVertical(categoryId: string | null | undefined, vert
   if (!categoryId) return true;
   return getContentVertical(verticalId).categoryRules.some((rule) => rule.id === categoryId);
 }
+
+
+const UNIQUE_TAGS_BY_VERTICAL: Record<ContentVerticalId, string[]> = {
+  COCINA: ['sin horno','air fryer','freidora de aire','sin gluten','saludable','vegetariano','vegetariana','vegano','vegana','desayuno','almuerzo','cena'],
+  OFICIOS: ['tutorial','herramientas','principiantes','principiante','sin experiencia','mantenimiento','reparación','reparacion'],
+};
+
+export function getInvalidTagsForVertical(tags: string[] | null | undefined, verticalId: ContentVerticalId): string[] {
+  if (!Array.isArray(tags)) return [];
+  const forbidden = new Set(UNIQUE_TAGS_BY_VERTICAL[verticalId === 'COCINA' ? 'OFICIOS' : 'COCINA'].map((tag) =>
+    tag.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''),
+  ));
+  return tags.filter((tag) => forbidden.has(String(tag).trim().toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')));
+}
