@@ -14,12 +14,13 @@ import { importVideosInBulk } from '../services/bulkVideoImport';
 import { YouTubeDiscoveryProvider } from '../services/discovery';
 import { purgeOriginDeletedVideos } from '../services/originCheck';
 import { dbStore, StoredVideo } from '../data/store';
-import { getInvalidTagsForVertical, isCategoryInVertical } from '../services/content/verticals';
+import { getContentVertical, getInvalidTagsForVertical, isCategoryInVertical } from '../services/content/verticals';
 
 const router = Router();
 const MAX_PAGE_SIZE = 50;
 const youtubeDiscoveryProvider = new YouTubeDiscoveryProvider();
 const discoveryLimiter = createDiscoveryRateLimiter(60000, 15);
+const aiAssistLimiter = createDiscoveryRateLimiter(60000, 5);
 
 router.use(authenticateUser);
 router.use(requireAdmin);
@@ -31,6 +32,110 @@ function parseLimit(value: unknown, fallback = 20): number {
 
 const ReportStatusSchema = z.object({ status: z.enum(['OPEN', 'REVIEWED', 'RESOLVED', 'REJECTED']) });
 const BulkImportSchema = z.object({ urls: z.array(z.string().url()).min(1).max(25), verticalId: z.enum(['COCINA', 'OFICIOS']).default('COCINA') });
+const AiAssistSchema = z.object({
+  urls: z.array(z.string().url()).min(1).max(10),
+  verticalId: z.enum(['COCINA', 'OFICIOS']).default('COCINA'),
+});
+
+function isVideoAiAssistEnabled(): boolean {
+  return process.env.VIDEO_AI_IMPORT_ENABLED === 'true' && Boolean(process.env.GEMINI_API_KEY?.trim());
+}
+
+router.get('/videos/ai-assist/status', (_req: AuthenticatedRequest, res: Response) => {
+  return res.json({ enabled: isVideoAiAssistEnabled() });
+});
+
+router.post('/videos/ai-assist/suggest', aiAssistLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  if (!isVideoAiAssistEnabled()) {
+    return res.status(503).json({ error: { code: 'AI_ASSIST_DISABLED', message: 'El asistente de IA está desactivado. Habilitalo temporalmente con VIDEO_AI_IMPORT_ENABLED=true y configurá GEMINI_API_KEY en el servidor.' } });
+  }
+
+  try {
+    const { urls, verticalId } = AiAssistSchema.parse(req.body);
+    const metadata = await Promise.all(urls.map(async (url) => {
+      try {
+        const extracted = await processExternalVideoUrl(url);
+        return { ok: true as const, url, extracted };
+      } catch (error: any) {
+        return { ok: false as const, url, error: error?.message || 'No se pudieron extraer los datos del enlace.' };
+      }
+    }));
+
+    const valid = metadata.filter((item): item is Extract<typeof metadata[number], { ok: true }> => item.ok);
+    if (!valid.length) {
+      return res.status(200).json({ suggestions: metadata.map(item => ({ url: item.url, error: item.ok ? undefined : item.error })) });
+    }
+
+    const input = valid.map((item, index) => ({
+      index,
+      url: item.url,
+      title: item.extracted.title,
+      description: item.extracted.description,
+      creatorName: item.extracted.creatorName,
+      platform: item.extracted.platform,
+    }));
+    const prompt = [
+      'Sos un asistente editorial privado para el administrador de AprendeViendo. No publiques ni importes nada.',
+      'A partir de los metadatos proporcionados, propone una ficha en español rioplatense. No inventes hechos específicos que no estén respaldados por el título o descripción.',
+      'Devuelve SOLO JSON válido con la forma {"items":[{"index":0,"title":"...","description":"...","tags":["..."],"categoryHint":"..."}]}.',
+      'El título debe ser claro y fiel al contenido; descripción breve; 3 a 6 etiquetas relevantes; categoryHint una categoría corta.',
+      'Vertical elegida: ' + (verticalId === 'COCINA' ? 'Cocina y pastelería' : 'Otros oficios y habilidades') + '.',
+      'Si el metadato es genérico o no permite saber el contenido, conserva un título prudente y acláralo brevemente en la descripción.',
+      JSON.stringify(input),
+    ].join('\n\n');
+
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(process.env.GEMINI_API_KEY!.trim()), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      console.error('Video AI assist provider error:', response.status, detail.slice(0, 500));
+      return res.status(502).json({ error: { code: 'AI_PROVIDER_ERROR', message: 'No se pudo obtener sugerencias de la IA. Probá nuevamente más tarde.' } });
+    }
+
+    const providerData: any = await response.json();
+    const raw = providerData.candidates?.[0]?.content?.parts?.map((part: any) => part.text || '').join('') || '';
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch {
+      return res.status(502).json({ error: { code: 'AI_INVALID_RESPONSE', message: 'La IA devolvió una respuesta que no se pudo interpretar. Probá nuevamente.' } });
+    }
+    const byIndex = new Map((Array.isArray(parsed.items) ? parsed.items : []).map((item: any) => [Number(item.index), item]));
+    const suggestions = metadata.map((item, index) => {
+      if (!item.ok) return { url: item.url, error: item.error };
+      const suggestion: any = byIndex.get(valid.findIndex(v => v.url === item.url));
+      const title = typeof suggestion?.title === 'string' ? suggestion.title.trim().slice(0, 180) : item.extracted.title;
+      const description = typeof suggestion?.description === 'string' ? suggestion.description.trim().slice(0, 1500) : item.extracted.description;
+      const rawTags = Array.isArray(suggestion?.tags) ? suggestion.tags.filter((tag: unknown): tag is string => typeof tag === 'string').map((tag: string) => tag.trim()).filter(Boolean).slice(0, 8) : [];
+      const invalidSuggestedTags = new Set(getInvalidTagsForVertical(rawTags, verticalId));
+      const tags = rawTags.filter((tag: string) => !invalidSuggestedTags.has(tag));
+      const classification = classifyVideo({ title, description, creatorName: item.extracted.creatorName }, verticalId);
+      return {
+        url: item.url,
+        title,
+        description,
+        creatorName: item.extracted.creatorName,
+        thumbnailUrl: item.extracted.thumbnailUrl,
+        platform: item.extracted.platform,
+        verticalId,
+        categoryId: classification.categoryId || getContentVertical(verticalId).categoryRules[0]?.id || null,
+        categoryHint: typeof suggestion?.categoryHint === 'string' ? suggestion.categoryHint.slice(0, 100) : '',
+        tags: tags.length ? tags : classification.tags,
+      };
+    });
+    return res.json({ suggestions });
+  } catch (error: any) {
+    if (error.name === 'ZodError') return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Ingresá entre 1 y 10 URLs válidas.' } });
+    console.error('Video AI assist failed:', error?.message || error);
+    return res.status(500).json({ error: { code: 'AI_ASSIST_FAILED', message: 'Ocurrió un error preparando las sugerencias.' } });
+  }
+});
+
 
 router.post('/videos/import', async (req: AuthenticatedRequest, res: Response) => {
   try {

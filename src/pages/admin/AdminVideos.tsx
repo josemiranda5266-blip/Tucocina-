@@ -3,6 +3,8 @@ import { Video, Category } from '../../types';
 import { api } from '../../services/api';
 import { Pagination } from '../../components/Pagination';
 import { DiscoverySection } from '../../components/admin/DiscoverySection';
+import { AiVideoImportAssistant } from '../../components/admin/AiVideoImportAssistant';
+import { TopicVideoCollector } from '../../components/admin/TopicVideoCollector';
 import { Edit, Trash2, EyeOff, CheckCircle, X, Upload, Link2, AlertCircle, CheckSquare, Square, Trash, Sparkles, Copy } from 'lucide-react';
 
 type BulkResult = Awaited<ReturnType<typeof api.adminImportVideosBulk>>[number];
@@ -280,7 +282,12 @@ export const AdminVideos: React.FC = () => {
         </div>
       )}
 
-      {/* Automatic Discovery System for Admin */}
+      {/* Topic-first collection with manual approval */}
+      <TopicVideoCollector onImportSuccess={loadVideos} />
+
+      {/* Optional AI assistance for manually supplied URLs */}
+      <AiVideoImportAssistant onImportSuccess={loadVideos} />
+
       <DiscoverySection onImportSuccess={loadVideos} />
 
       {/* Bulk Import Box */}
