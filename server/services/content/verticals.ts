@@ -36,7 +36,7 @@ export const CONTENT_VERTICALS: Record<ContentVerticalId, ContentVerticalDefinit
     discoveryQueries: ['recetas fáciles','recetas argentinas','cocina argentina','cómo hacer empanadas','cómo hacer pizza','recetas de pollo','recetas de carne','recetas de pasta','recetas fáciles y rápidas','postres fáciles','tortas fáciles','pan casero','cocina casera','recetas tradicionales','comida casera','asado criollo paso a paso','locro criollo tradicional','comida saludable fácil'],
   },
   OFICIOS: {
-    id: 'OFICIOS', name: 'Oficios', description: 'Videos prácticos sobre reparación, instalación, fabricación y mantenimiento de oficios.',
+    id: 'OFICIOS', name: 'Oficios', description: 'Videos prácticos sobre oficios técnicos, trabajos manuales, tecnología y habilidades para trabajar o emprender.',
     positiveTerms: ['oficio','oficios','cómo hacer','como hacer','paso a paso','tutorial','instalar','instalación','instalacion','reparar','reparación','reparacion','arreglar','mantenimiento','fabricar','fabricación','fabricacion','herramientas','medir','cortar','soldar','soldadura','montar','desmontar','electricista','plomero','carpintero','albañil','pintor','soldador','mecánico','mecanico','refrigeración','refrigeracion'],
     exclusionTerms: ['música','musica','official music video','videoclip','song','album','remix','cover','trailer','película','pelicula','movie','gameplay','gaming','noticias','noticia','news','política','politica','fútbol','futbol','unboxing','reaction','reacción','parodia'],
     categoryRules: [
@@ -47,10 +47,17 @@ export const CONTENT_VERTICALS: Record<ContentVerticalId, ContentVerticalDefinit
       {id:'of-pintura',name:'Pintura',terms:['pintura','pintor','pintar','rodillo','pincel','barniz','látex','latex']},
       {id:'of-soldadura',name:'Soldadura',terms:['soldadura','soldar','soldador','electrodo','mig','tig','herrero','herreria']},
       {id:'of-mecanica',name:'Mecánica',terms:['mecánica','mecanica','mecánico','mecanico','motor','auto','automóvil','automovil','freno','embrague','aceite']},
-      {id:'of-refrigeracion',name:'Refrigeración',terms:['refrigeración','refrigeracion','refrigerador','heladera','aire acondicionado','gas refrigerante','compresor']},
+      {id:'of-refrigeracion',name:'Refrigeración y aire acondicionado',terms:['refrigeración','refrigeracion','refrigerador','heladera','aire acondicionado','gas refrigerante','compresor']},
+      {id:'of-costura',name:'Costura y confección',terms:['costura','coser','máquina de coser','maquina de coser','confección','confeccion','patrón','patron','tela','ropa','modista']},
+      {id:'of-peluqueria',name:'Peluquería y barbería',terms:['peluquería','peluqueria','peluquero','barbería','barberia','corte de pelo','tinte','cabello','barba']},
+      {id:'of-belleza',name:'Belleza y maquillaje',terms:['maquillaje','maquillar','manicura','uñas','unas','estética','estetica','pestañas','pestanas','depilación','depilacion']},
+      {id:'of-jardineria',name:'Jardinería',terms:['jardinería','jardineria','jardinero','plantas','poda','huerta','césped','cesped','riego','compost']},
+      {id:'of-informatica',name:'Informática y tecnología',terms:['informática','informatica','computadora','pc','computación','computacion','programación','programacion','redes','software','reparar computadora']},
+      {id:'of-ventas',name:'Ventas y emprendimientos',terms:['ventas','vender','emprender','emprendimiento','negocio','marketing','atención al cliente','atencion al cliente','publicidad']},
+      {id:'of-artesanias',name:'Artesanías y manualidades',terms:['artesanía','artesania','manualidades','artesanal','decoración','decoracion','reciclado','reciclar','macramé','macrame']},
     ],
     tagTerms: ['fácil','facil','rápido','rapido','paso a paso','tutorial','herramientas','principiantes','principiante','casero','casera','económico','economico','sin experiencia','mantenimiento','reparación','reparacion'],
-    discoveryQueries: ['electricidad domiciliaria paso a paso','cómo instalar un tomacorriente','plomería reparación paso a paso','carpintería para principiantes','cómo reparar una canilla','albañilería paso a paso','pintura de paredes tutorial','soldadura para principiantes','mecánica automotriz básica','refrigeración reparación'],
+    discoveryQueries: ['electricidad domiciliaria paso a paso','cómo instalar un tomacorriente','plomería reparación paso a paso','carpintería para principiantes','cómo reparar una canilla','albañilería paso a paso','pintura de paredes tutorial','soldadura para principiantes','mecánica automotriz básica','refrigeración reparación','costura para principiantes','corte de pelo tutorial','maquillaje paso a paso','jardinería para principiantes','reparar computadora tutorial','técnicas de venta para principiantes','manualidades fáciles'],
   },
 };
 
