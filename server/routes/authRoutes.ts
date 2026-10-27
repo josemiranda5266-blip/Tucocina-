@@ -117,7 +117,7 @@ router.delete('/account', async (req: AuthenticatedRequest, res: Response) => {
     return res.json({ success: true, deleted: deletedCounts });
   } catch (error: any) {
     console.error('[AuthAccount] Error eliminando cuenta:', error);
-    return res.status(500).json({ error: { code: 'ACCOUNT_DELETE_FAILED', message: 'No se pudo eliminar completamente la cuenta. No cierres la sesión y contactá al soporte de CociFlash.' } });
+    return res.status(500).json({ error: { code: 'ACCOUNT_DELETE_FAILED', message: 'No se pudo eliminar completamente la cuenta. No cierres la sesión y contactá al soporte de AprendeViendo.' } });
   }
 });
 
