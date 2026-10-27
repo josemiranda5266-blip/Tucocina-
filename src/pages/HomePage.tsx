@@ -107,9 +107,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
 
       <section id="home-hero" className="relative bg-gradient-to-br from-amber-900 via-amber-950 to-stone-900 text-white rounded-3xl p-7 sm:p-10 shadow-2xl overflow-hidden border border-amber-800/40">
         <div className="relative z-10 max-w-3xl space-y-5">
-          <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-300 px-3.5 py-1 rounded-full text-xs font-semibold border border-amber-400/30"><ChefHat className="w-4 h-4" /><span>Catálogo Gastronómico de Videos</span></div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold font-serif leading-tight tracking-tight text-white">Descubrí tu próximo plato favorito</h1>
-          <p className="text-amber-100/90 text-base sm:text-lg leading-relaxed font-sans">Buscá y guardá las mejores recetas en video publicadas por creadores expertos en YouTube, Instagram y TikTok.</p>
+          <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-300 px-3.5 py-1 rounded-full text-xs font-semibold border border-amber-400/30"><ChefHat className="w-4 h-4" /><span>Aprendizaje práctico en video</span></div>
+          <h1 className="text-3xl sm:text-5xl font-extrabold font-serif leading-tight tracking-tight text-white">Aprendé algo nuevo, paso a paso</h1>
+          <p className="text-amber-100/90 text-base sm:text-lg leading-relaxed font-sans">Explorá videos de cocina, oficios y habilidades útiles publicados por sus creadores en YouTube, Instagram y TikTok.</p>
           <SearchBar onSearch={handleSearchSubmit} className="max-w-2xl pt-1" />
         </div>
       </section>
@@ -117,9 +117,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
       <AdSlot placement="HOME_MIDDLE" />
 
       <section id="home-popular" className="space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2"><div><div className="flex items-center space-x-2"><Flame className="w-5 h-5 text-amber-600" /><h2 className="text-2xl font-bold font-serif text-stone-900">Recetas para descubrir</h2></div><p className="text-sm text-stone-500 mt-1">Las más vistas para inspirarte y descubrir nuevas recetas.</p></div><span className="text-xs font-semibold text-stone-500">Página {popularPage} de {popularTotalPages}</span></div>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2"><div><div className="flex items-center space-x-2"><Flame className="w-5 h-5 text-amber-600" /><h2 className="text-2xl font-bold font-serif text-stone-900">Videos para aprender</h2></div><p className="text-sm text-stone-500 mt-1">Descubrí ideas, técnicas y conocimientos prácticos.</p></div><span className="text-xs font-semibold text-stone-500">Página {popularPage} de {popularTotalPages}</span></div>
 
-        <VideoGrid videos={popularVideos} loading={loading || popularLoading} onVideoSelect={onVideoSelect} emptyTitle="Aún no hay recetas para descubrir" emptyMessage="Los administradores agregarán nuevos videos pronto." />
+        <VideoGrid videos={popularVideos} loading={loading || popularLoading} onVideoSelect={onVideoSelect} emptyTitle="Todavía no hay videos para descubrir" emptyMessage="Pronto se agregarán nuevos contenidos." />
 
         {popularTotalPages > 1 && (
           <nav aria-label="Paginación de recetas para descubrir" className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
