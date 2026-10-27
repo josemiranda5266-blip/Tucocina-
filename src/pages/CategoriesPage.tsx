@@ -28,11 +28,11 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ onCategorySelect
             <Utensils className="w-6 h-6" />
           </div>
           <h1 className="text-3xl font-extrabold font-serif text-stone-900">
-            Categorías Gastronómicas
+            Categorías para aprender
           </h1>
         </div>
         <p className="text-stone-600 text-sm">
-          Elegí tu tipo de cocina preferida para filtrar las recetas disponibles.
+          Explorá cocina y pastelería, oficios técnicos, trabajos manuales, tecnología y otras habilidades prácticas.
         </p>
       </div>
 
