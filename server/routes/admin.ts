@@ -111,7 +111,9 @@ router.post('/videos/ai-assist/suggest', aiAssistLimiter, async (req: Authentica
       const suggestion: any = byIndex.get(valid.findIndex(v => v.url === item.url));
       const title = typeof suggestion?.title === 'string' ? suggestion.title.trim().slice(0, 180) : item.extracted.title;
       const description = typeof suggestion?.description === 'string' ? suggestion.description.trim().slice(0, 1500) : item.extracted.description;
-      const tags = Array.isArray(suggestion?.tags) ? suggestion.tags.filter((tag: unknown): tag is string => typeof tag === 'string').map((tag: string) => tag.trim()).filter(Boolean).slice(0, 8) : [];
+      const rawTags = Array.isArray(suggestion?.tags) ? suggestion.tags.filter((tag: unknown): tag is string => typeof tag === 'string').map((tag: string) => tag.trim()).filter(Boolean).slice(0, 8) : [];
+      const invalidSuggestedTags = new Set(getInvalidTagsForVertical(rawTags, verticalId));
+      const tags = rawTags.filter((tag: string) => !invalidSuggestedTags.has(tag));
       const classification = classifyVideo({ title, description, creatorName: item.extracted.creatorName }, verticalId);
       return {
         url: item.url,
