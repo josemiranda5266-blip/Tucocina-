@@ -197,7 +197,7 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
               <label className="block text-xs font-bold text-stone-700 mb-1">Vertical</label>
               <select value={verticalId} onChange={(e) => setVerticalId(e.target.value as ContentVerticalId)} className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-600 focus:bg-white">
                 <option value="COCINA">Cocina</option>
-                <option value="OFICIOS">Oficios</option>
+                <option value="OFICIOS">Otros oficios y habilidades</option>
               </select>
             </div>
             <div className="md:col-span-2">
