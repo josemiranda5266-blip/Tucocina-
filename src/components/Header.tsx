@@ -23,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
 
   const handleDeleteAccount = async () => {
     if (deletingAccount) return;
-    const confirmed = window.confirm('¿Eliminar definitivamente tu cuenta de CociFlash? Se eliminarán tu perfil, favoritos, reportes y comentarios asociados. Esta acción no se puede deshacer.');
+    const confirmed = window.confirm('¿Eliminar definitivamente tu cuenta de AprendeViendo? Se eliminarán tu perfil, favoritos, reportes y comentarios asociados. Esta acción no se puede deshacer.');
     if (!confirmed) return;
     setDeletingAccount(true);
     try {
@@ -45,9 +45,9 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
     <header id="main-header" className="sticky top-0 z-40 bg-amber-900/95 backdrop-blur-md text-amber-50 border-b border-amber-800/50 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <button type="button" aria-label="Ir al inicio de CociFlash" className="flex items-center space-x-3 text-left cursor-pointer" onClick={() => onNavigate('home')}>
+          <button type="button" aria-label="Ir al inicio de AprendeViendo" className="flex items-center space-x-3 text-left cursor-pointer" onClick={() => onNavigate('home')}>
             <div className="p-2 bg-amber-500/20 text-amber-300 rounded-xl border border-amber-400/30 shadow-inner"><ChefHat className="w-6 h-6" aria-hidden="true" /></div>
-            <div><span className="font-extrabold text-xl tracking-tight text-white font-serif">CociFlash</span><span className="hidden sm:inline-block ml-2 text-xs font-medium text-amber-200/80 bg-amber-800/60 px-2 py-0.5 rounded-full border border-amber-700/50">Videos de Cocina</span></div>
+            <div><span className="font-extrabold text-xl tracking-tight text-white font-serif">AprendeViendo</span><span className="hidden sm:inline-block ml-2 text-xs font-medium text-amber-200/80 bg-amber-800/60 px-2 py-0.5 rounded-full border border-amber-700/50">Aprendé viendo</span></div>
           </button>
           <nav aria-label="Navegación principal" className="hidden md:flex items-center space-x-1">
             <button type="button" id="nav-home-btn" onClick={() => onNavigate('home')} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${currentView === 'home' ? 'bg-amber-800 text-white font-semibold' : 'text-amber-100 hover:bg-amber-800/60 hover:text-white'}`}>Inicio</button>
