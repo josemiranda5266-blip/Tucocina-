@@ -67,7 +67,7 @@ export const TopicVideoCollector: React.FC<{ onImportSuccess?: () => void }> = (
       }
       const availableCategories = categories.length ? categories : await api.getCategories(verticalId).catch(() => []);
       setCategories(availableCategories);
-      const normalize = (value: string) => value.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();
+      const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       const normalizedTopic = normalize(cleanTopic);
       const topicCategory = availableCategories.find((category) => {
         const normalizedName = normalize(category.name);
