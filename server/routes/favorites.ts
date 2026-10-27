@@ -43,7 +43,7 @@ router.post('/:videoId', async (req: AuthenticatedRequest, res: Response) => {
     const video = dbStore.getVideoById(videoId);
 
     if (video && (video.verticalId || 'COCINA') !== 'COCINA') {
-      return res.status(404).json({ error: { code: 'VIDEO_NOT_FOUND', message: 'El video no está disponible en CociFlash' } });
+      return res.status(404).json({ error: { code: 'VIDEO_NOT_FOUND', message: 'El video no está disponible en AprendeViendo' } });
     }
 
     if (!video || video.status !== 'PUBLISHED') {
