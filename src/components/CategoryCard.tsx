@@ -14,6 +14,7 @@ import {
   Apple,
   Flame,
   Globe,
+  Wrench,
 } from 'lucide-react';
 
 interface CategoryCardProps {
@@ -35,6 +36,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Apple: <Apple className="w-6 h-6" />,
   Flame: <Flame className="w-6 h-6" />,
   Globe: <Globe className="w-6 h-6" />,
+  Wrench: <Wrench className="w-6 h-6" />,
 };
 
 export const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick }) => {

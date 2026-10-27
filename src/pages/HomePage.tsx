@@ -5,7 +5,7 @@ import { AdSlot } from '../components/ads/AdSlot';
 import { Video, Category } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ChefHat, Flame, Clock, ArrowRight, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChefHat, Flame, Clock, ArrowRight, Shield, ChevronLeft, ChevronRight, BookOpen, Wrench } from 'lucide-react';
 
 interface HomePageProps {
   onNavigate: (view: string, param?: string) => void;
@@ -82,7 +82,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
       setPopularTotal(result.total);
       window.setTimeout(() => document.getElementById('home-popular')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
     } catch (err) {
-      console.error('Error al cambiar de página de recetas:', err);
+      console.error('Error al cambiar de página de videos:', err);
     } finally {
       setPopularLoading(false);
     }
@@ -107,22 +107,32 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
 
       <section id="home-hero" className="relative bg-gradient-to-br from-amber-900 via-amber-950 to-stone-900 text-white rounded-3xl p-7 sm:p-10 shadow-2xl overflow-hidden border border-amber-800/40">
         <div className="relative z-10 max-w-3xl space-y-5">
-          <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-300 px-3.5 py-1 rounded-full text-xs font-semibold border border-amber-400/30"><ChefHat className="w-4 h-4" /><span>Catálogo Gastronómico de Videos</span></div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold font-serif leading-tight tracking-tight text-white">Descubrí tu próximo plato favorito</h1>
-          <p className="text-amber-100/90 text-base sm:text-lg leading-relaxed font-sans">Buscá y guardá las mejores recetas en video publicadas por creadores expertos en YouTube, Instagram y TikTok.</p>
+          <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-300 px-3.5 py-1 rounded-full text-xs font-semibold border border-amber-400/30"><BookOpen className="w-4 h-4" /><span>Aprendizaje práctico en video</span></div>
+          <h1 className="text-3xl sm:text-5xl font-extrabold font-serif leading-tight tracking-tight text-white">Aprendé algo nuevo, paso a paso</h1>
+          <p className="text-amber-100/90 text-base sm:text-lg leading-relaxed font-sans">Explorá videos de cocina, oficios y habilidades útiles publicados por sus creadores en YouTube, Instagram y TikTok.</p>
           <SearchBar onSearch={handleSearchSubmit} className="max-w-2xl pt-1" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <button type="button" onClick={() => onNavigate('search', 'vertical:COCINA')} className="flex items-center gap-3 rounded-2xl border border-amber-300/30 bg-white/10 p-4 text-left transition hover:bg-white/15">
+              <span className="rounded-xl bg-amber-400/20 p-2.5 text-amber-200"><ChefHat className="h-6 w-6" /></span>
+              <span><strong className="block text-sm text-white">Cocina y pastelería</strong><span className="text-xs text-amber-100/80">Recetas, panadería y técnicas</span></span>
+            </button>
+            <button type="button" onClick={() => onNavigate('search', 'vertical:OFICIOS')} className="flex items-center gap-3 rounded-2xl border border-amber-300/30 bg-white/10 p-4 text-left transition hover:bg-white/15">
+              <span className="rounded-xl bg-amber-400/20 p-2.5 text-amber-200"><Wrench className="h-6 w-6" /></span>
+              <span><strong className="block text-sm text-white">Oficios y habilidades</strong><span className="text-xs text-amber-100/80">Aprendé técnicas prácticas</span></span>
+            </button>
+          </div>
         </div>
       </section>
 
       <AdSlot placement="HOME_MIDDLE" />
 
       <section id="home-popular" className="space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2"><div><div className="flex items-center space-x-2"><Flame className="w-5 h-5 text-amber-600" /><h2 className="text-2xl font-bold font-serif text-stone-900">Recetas para descubrir</h2></div><p className="text-sm text-stone-500 mt-1">Las más vistas para inspirarte y descubrir nuevas recetas.</p></div><span className="text-xs font-semibold text-stone-500">Página {popularPage} de {popularTotalPages}</span></div>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2"><div><div className="flex items-center space-x-2"><Flame className="w-5 h-5 text-amber-600" /><h2 className="text-2xl font-bold font-serif text-stone-900">Videos para aprender</h2></div><p className="text-sm text-stone-500 mt-1">Descubrí ideas, técnicas y conocimientos prácticos.</p></div><span className="text-xs font-semibold text-stone-500">Página {popularPage} de {popularTotalPages}</span></div>
 
-        <VideoGrid videos={popularVideos} loading={loading || popularLoading} onVideoSelect={onVideoSelect} emptyTitle="Aún no hay recetas para descubrir" emptyMessage="Los administradores agregarán nuevos videos pronto." />
+        <VideoGrid videos={popularVideos} loading={loading || popularLoading} onVideoSelect={onVideoSelect} emptyTitle="Todavía no hay videos para descubrir" emptyMessage="Pronto se agregarán nuevos contenidos." />
 
         {popularTotalPages > 1 && (
-          <nav aria-label="Paginación de recetas para descubrir" className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <nav aria-label="Paginación de videos para aprender" className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button type="button" onClick={() => loadPopularPage(popularPage - 1)} disabled={popularPage === 1 || popularLoading} className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-white border border-stone-200 text-stone-700 text-sm font-bold hover:border-amber-500 hover:text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed"><ChevronLeft className="w-4 h-4" />Anterior</button>
             <div className="flex items-center gap-1.5" role="list">{pageNumbers.map((page, index) => <React.Fragment key={page}>{index > 0 && page - pageNumbers[index - 1] > 1 && <span className="px-1 text-stone-400" aria-hidden="true">…</span>}{renderPageButton(page)}</React.Fragment>)}</div>
             <button type="button" onClick={() => loadPopularPage(popularPage + 1)} disabled={popularPage === popularTotalPages || popularLoading} className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-white border border-stone-200 text-stone-700 text-sm font-bold hover:border-amber-500 hover:text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed">Siguiente<ChevronRight className="w-4 h-4" /></button>

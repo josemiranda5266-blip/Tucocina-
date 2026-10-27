@@ -1,9 +1,9 @@
-# CO-Cocina 🍳
+# AprendeViendo 📚
 
-CO-Cocina es una plataforma web moderna para **descubrir, buscar y guardar videos de cocina** alojados en plataformas externas (YouTube, Instagram, TikTok).
+AprendeViendo es una plataforma web para **descubrir, buscar y guardar videos de aprendizaje práctico**: cocina, pastelería, oficios técnicos, trabajos manuales, tecnología y habilidades laborales. Los videos se alojan en plataformas externas como YouTube, Instagram y TikTok.
 
 ## 📌 Concepto del Producto
-CO-Cocina no es un chatbot ni una aplicación centrada en la IA. Es un catálogo y buscador gastronómico ágil, visual y seguro. Los videos pertenecen a sus respectivos creadores y plataformas originales, siendo reproducidos mediante incrustación oficial (embed).
+AprendeViendo es un catálogo y buscador audiovisual, no un chatbot. Su objetivo es facilitar el acceso a tutoriales y demostraciones prácticas, respetando a los creadores y las plataformas originales. Los videos pertenecen a sus respectivos creadores y plataformas originales, siendo reproducidos mediante incrustación oficial (embed).
 
 ## 🛠️ Stack Tecnológico
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons, Motion.

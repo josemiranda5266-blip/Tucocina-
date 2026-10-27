@@ -91,7 +91,7 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
       setSuccessMsg(
         video.status === 'PUBLISHED'
           ? 'El video ya estaba importado en el sistema. Podés revisar la vista previa y editar los datos abajo.'
-          : '¡Video importado con éxito como Borrador! Ahora podés revisar la vista previa del video original, personalizar el título y publicarlo.'
+          : '¡Video importado como borrador! Revisá la vista previa, ajustá sus datos y publicalo cuando esté listo.'
       );
     } catch (err: any) {
       console.error('Error al importar video:', err);
@@ -111,7 +111,7 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
   const handlePublishOrSave = async (targetStatus: Video['status'] = 'PUBLISHED') => {
     if (!importedVideo) return;
     if (!editTitle.trim()) {
-      setError('Por favor ingresá un título para la receta antes de publicar.');
+      setError('Por favor ingresá un título para el video antes de publicar.');
       return;
     }
 
@@ -145,8 +145,8 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
 
   const isGenericTitle =
     editTitle.toLowerCase().includes('reel de cocina') ||
-    editTitle.toLowerCase().includes('receta de cocina en instagram') ||
-    editTitle.toLowerCase().includes('receta de cocina en tiktok');
+    editTitle.toLowerCase().includes('video de cocina en instagram') ||
+    editTitle.toLowerCase().includes('video de cocina en tiktok');
 
   // Video object with active edit state for live preview
   const previewVideoObject: Video | null = importedVideo
@@ -170,7 +170,7 @@ export const AdminImportVideo: React.FC<AdminImportVideoProps> = ({ onVideoSelec
             <PlusCircle className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold font-serif text-stone-900">Importar y Publicar Receta</h2>
+            <h2 className="text-xl font-bold font-serif text-stone-900">Importar y publicar video</h2>
             <p className="text-xs text-stone-500">
               Pegá un enlace de Instagram Reels, YouTube o TikTok. Se extraerá la metadata y podrás ver la vista previa del video original.
             </p>

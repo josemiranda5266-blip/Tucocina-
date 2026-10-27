@@ -120,7 +120,7 @@ export const AdminVideos: React.FC = () => {
       await Promise.all(
         selectedIds.map((id) => api.adminUpdateVideo(id, { status: 'PUBLISHED' }))
       );
-      showNotification(`¡${selectedIds.length} recetas publicadas en el catálogo!`);
+      showNotification(`¡${selectedIds.length} videos publicados en el catálogo!`);
       loadVideos();
     } catch {
       setError('Error al publicar algunos de los videos seleccionados.');

@@ -4,7 +4,7 @@ import { FilterBar } from '../components/FilterBar';
 import { VideoGrid } from '../components/VideoGrid';
 import { Pagination } from '../components/Pagination';
 import { AdSlot } from '../components/ads/AdSlot';
-import { Video, Category, VideoPlatform } from '../types';
+import { Video, Category, VideoPlatform, ContentVerticalId } from '../types';
 import { api } from '../services/api';
 import { track } from '../services/analytics';
 
@@ -27,7 +27,17 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
   const [error, setError] = useState<string | null>(null);
   let parsedCategory = '';
   let parsedSearch = initialQuery;
-  if (initialQuery.startsWith('cat:')) { parsedCategory = initialQuery.replace('cat:', ''); parsedSearch = ''; }
+  let initialVertical: ContentVerticalId = 'COCINA';
+  if (initialQuery.startsWith('vertical:')) {
+    initialVertical = initialQuery.replace('vertical:', '') === 'OFICIOS' ? 'OFICIOS' : 'COCINA';
+    parsedSearch = '';
+  }
+  if (initialQuery.startsWith('cat:')) {
+    parsedCategory = initialQuery.replace('cat:', '');
+    initialVertical = parsedCategory.startsWith('of-') ? 'OFICIOS' : 'COCINA';
+    parsedSearch = '';
+  }
+  const [verticalId, setVerticalId] = useState<ContentVerticalId>(initialVertical);
   const [searchQuery, setSearchQuery] = useState(parsedSearch);
   const [selectedCategory, setSelectedCategory] = useState(parsedCategory);
   const [selectedPlatform, setSelectedPlatform] = useState<VideoPlatform | ''>('');
@@ -38,7 +48,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
   const initialSearchTracked = useRef(false);
   const noResultsTracked = useRef<string | null>(null);
 
-  useEffect(() => { api.getCategories().then(setCategories).catch(() => setCategories([])); }, []);
+  useEffect(() => { api.getCategories(verticalId).then(setCategories).catch(() => setCategories([])); }, [verticalId]);
 
   // Only genuine text queries enter the search metric. Internal routes such as
   // cat:... and the old "all" navigation value are intentionally excluded.
@@ -55,7 +65,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
     let active = true;
     setLoading(true);
     setError(null);
-    api.getVideos({ cursor: pageCursors[currentPage], limit: 12, searchQuery, categoryId: selectedCategory || undefined, platform: selectedPlatform || undefined, sortBy: selectedSort })
+    api.getVideos({ cursor: pageCursors[currentPage], limit: 12, verticalId, searchQuery, categoryId: selectedCategory || undefined, platform: selectedPlatform || undefined, sortBy: selectedSort })
       .then((res) => {
         if (!active) return;
         setVideos(res.items);
@@ -75,7 +85,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
       .catch((err) => { if (!active) return; setVideos([]); setHasMore(false); setError(err instanceof Error ? err.message : 'No se pudo cargar el catálogo.'); track('search_error', { query: normalizeAnalyticsQuery(searchQuery) }); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [searchQuery, selectedCategory, selectedPlatform, selectedSort, currentPage, pageCursors]);
+  }, [verticalId, searchQuery, selectedCategory, selectedPlatform, selectedSort, currentPage, pageCursors]);
 
   const resetPagination = () => { setCurrentPage(1); setPageCursors({}); };
   const handleSearch = (q: string) => {
@@ -89,6 +99,14 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
     resetPagination();
   };
   const handleResetFilters = () => { setSearchQuery(''); setSelectedCategory(''); setSelectedPlatform(''); setSelectedSort('recent'); resetPagination(); };
+  const handleVerticalChange = (next: ContentVerticalId) => {
+    setVerticalId(next);
+    setSearchQuery('');
+    setSelectedCategory('');
+    setSelectedPlatform('');
+    setSelectedSort('recent');
+    resetPagination();
+  };
   const handleSearchResultSelect = (video: Video) => {
     track('search_result_click', {
       videoId: video.id,
@@ -102,10 +120,14 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="space-y-2"><h1 className="text-3xl font-extrabold font-serif text-stone-900">Buscador de Videos de Cocina</h1><p className="text-stone-600 text-sm">Buscá por nombre del plato, ingrediente, creador o etiquetas. La búsqueda por texto recorre todo el catálogo publicado.</p></div>
+      <div className="space-y-2"><h1 className="text-3xl font-extrabold font-serif text-stone-900">Buscador de AprendeViendo</h1><p className="text-stone-600 text-sm">Encontrá tutoriales de cocina, oficios y habilidades prácticas por nombre, tema, creador o etiquetas.</p>
+        <div className="inline-flex flex-wrap gap-2 rounded-xl bg-stone-100 p-1" aria-label="Área de aprendizaje">
+          <button type="button" onClick={() => handleVerticalChange('COCINA')} aria-pressed={verticalId === 'COCINA'} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${verticalId === 'COCINA' ? 'bg-amber-700 text-white shadow-sm' : 'text-stone-700 hover:bg-white'}`}>Cocina y pastelería</button>
+          <button type="button" onClick={() => handleVerticalChange('OFICIOS')} aria-pressed={verticalId === 'OFICIOS'} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${verticalId === 'OFICIOS' ? 'bg-amber-700 text-white shadow-sm' : 'text-stone-700 hover:bg-white'}`}>Oficios y habilidades</button>
+        </div></div>
       <SearchBar initialValue={searchQuery} onSearch={handleSearch} />
       <FilterBar categories={categories} selectedCategory={selectedCategory} selectedPlatform={selectedPlatform} selectedSort={selectedSort} onCategoryChange={(cat) => { setSelectedCategory(cat); setSearchQuery(''); resetPagination(); if (cat) track('view_category', { categoryId: cat }); }} onPlatformChange={(plat) => { setSelectedPlatform(plat); setSearchQuery(''); resetPagination(); }} onSortChange={(sort) => { setSelectedSort(sort); resetPagination(); }} onReset={handleResetFilters} />
-      {hasActiveFilters && <div className="text-xs text-stone-500">{searchQuery.trim() ? `Buscando “${searchQuery.trim()}” en todos los videos publicados.` : 'Hay filtros activos en el catálogo.'}</div>}
+      {hasActiveFilters && <div className="text-xs text-stone-500">{searchQuery.trim() ? `Buscando “${searchQuery.trim()}” en ${verticalId === 'COCINA' ? 'cocina y pastelería' : 'oficios y habilidades'}.` : 'Hay filtros activos en el catálogo.'}</div>}
       {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>}
       <AdSlot placement="SEARCH_MIDDLE" />
       <VideoGrid videos={videos} loading={loading} onVideoSelect={handleSearchResultSelect} />

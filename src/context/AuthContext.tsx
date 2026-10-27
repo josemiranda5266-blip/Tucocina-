@@ -12,7 +12,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../config/firebase';
 import { UserProfile, UserRole } from '../types';
 
-export const CURRENT_LEGAL_VERSION = '2026-09-14';
+export const CURRENT_LEGAL_VERSION = '2026-10-27';
 
 interface AuthContextType {
   user: User | null;

@@ -107,7 +107,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[CociFlash Server] Listening on http://0.0.0.0:${PORT}`);
+    console.log(`[AprendeViendo Server] Listening on http://0.0.0.0:${PORT}`);
   });
 }
 
@@ -115,7 +115,7 @@ export { app };
 
 if (process.env.NODE_ENV !== 'test') {
   startServer().catch((err) => {
-    console.error('[CociFlash Fatal Error]:', err);
+    console.error('[AprendeViendo Fatal Error]:', err);
     process.exitCode = 1;
   });
 }
