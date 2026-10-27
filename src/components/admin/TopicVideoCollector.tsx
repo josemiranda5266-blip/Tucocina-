@@ -133,7 +133,6 @@ export const TopicVideoCollector: React.FC<{ onImportSuccess?: () => void }> = (
     for (const item of selected) {
       try {
         const result = await api.adminImportVideoDetailed(item.url, verticalId);
-        if (result.isDuplicate) { duplicateCount++; continue; }
         const updates: Partial<Video> = {
           title: item.title.trim().slice(0, 180),
           description: item.description.trim().slice(0, 1500),
@@ -141,6 +140,18 @@ export const TopicVideoCollector: React.FC<{ onImportSuccess?: () => void }> = (
           status: 'PUBLISHED',
         };
         if (item.categoryId) updates.categoryId = item.categoryId;
+        if (result.isDuplicate) {
+          // If this candidate was imported earlier as a draft, the administrator's
+          // explicit approval should finish that existing draft instead of silently skipping it.
+          if (result.video.status === 'DRAFT' || result.video.status === 'PENDING_REVIEW') {
+            await api.adminUpdateVideo(result.video.id, updates);
+            importedCount++;
+            setCandidates((old) => old.map((row) => row.url === item.url ? { ...row, selected: false } : row));
+          } else {
+            duplicateCount++;
+          }
+          continue;
+        }
         await api.adminUpdateVideo(result.video.id, updates);
         importedCount++;
         setCandidates((old) => old.map((row) => row.url === item.url ? { ...row, selected: false } : row));
