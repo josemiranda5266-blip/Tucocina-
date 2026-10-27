@@ -65,13 +65,21 @@ export const TopicVideoCollector: React.FC<{ onImportSuccess?: () => void }> = (
         setError(result.message || 'Falta configurar YOUTUBE_API_KEY en el servidor.');
         return;
       }
+      const availableCategories = categories.length ? categories : await api.getCategories(verticalId).catch(() => []);
+      setCategories(availableCategories);
+      const normalize = (value: string) => value.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();
+      const normalizedTopic = normalize(cleanTopic);
+      const topicCategory = availableCategories.find((category) => {
+        const normalizedName = normalize(category.name);
+        return normalizedName.length >= 4 && normalizedTopic.includes(normalizedName);
+      });
       const rows: Candidate[] = (result.candidates || []).map((item: any) => ({
         url: item.originalUrl || `https://www.youtube.com/watch?v=${item.externalVideoId}`,
         title: item.title || 'Video sin título',
         description: item.description || '',
         creatorName: item.creatorName || '',
         thumbnailUrl: item.thumbnailUrl || '',
-        categoryId: item.suggestedCategory?.id || '',
+        categoryId: topicCategory?.id || item.suggestedCategory?.id || '',
         tags: Array.isArray(item.suggestedTags) ? item.suggestedTags : [],
         selected: true,
         views: Number(item.views || 0),
@@ -130,7 +138,7 @@ export const TopicVideoCollector: React.FC<{ onImportSuccess?: () => void }> = (
           title: item.title.trim().slice(0, 180),
           description: item.description.trim().slice(0, 1500),
           tags: item.tags.slice(0, 8),
-          status: 'DRAFT',
+          status: 'PUBLISHED',
         };
         if (item.categoryId) updates.categoryId = item.categoryId;
         await api.adminUpdateVideo(result.video.id, updates);
@@ -141,7 +149,7 @@ export const TopicVideoCollector: React.FC<{ onImportSuccess?: () => void }> = (
       }
     }
     setImportBusy(false);
-    setNotice(`Borradores creados: ${importedCount}. Duplicados omitidos: ${duplicateCount}.${failures.length ? ` Errores: ${failures.length}.` : ''}`);
+    setNotice(`Publicados en el catálogo: ${importedCount}. Duplicados omitidos: ${duplicateCount}.${failures.length ? ` Errores: ${failures.length}.` : ''}`);
     if (failures.length) setError(failures.slice(0, 3).join(' · ').slice(0, 700));
     if (importedCount) onImportSuccess?.();
   }
@@ -152,7 +160,7 @@ export const TopicVideoCollector: React.FC<{ onImportSuccess?: () => void }> = (
         <div className="rounded-xl bg-emerald-100 p-2.5 text-emerald-800"><Search className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
           <h2 className="text-xl font-bold font-serif text-stone-900">Recolector automático por tema</h2>
-          <p className="mt-1 text-sm text-stone-600">Escribí un tema y recopilá videos de YouTube. Revisá, modificá o rechazá cada candidato; solo lo que apruebes se guarda como borrador.</p>
+          <p className="mt-1 text-sm text-stone-600">Escribí un tema y recopilá videos de YouTube. Revisá, modificá o rechazá cada candidato; los videos que apruebes se publican en la categoría elegida.</p>
         </div>
         <ShieldCheck className="h-5 w-5 text-emerald-700" />
       </div>
@@ -186,10 +194,10 @@ export const TopicVideoCollector: React.FC<{ onImportSuccess?: () => void }> = (
           {aiBusy ? <><LoaderCircle className="mr-2 inline h-4 w-4 animate-spin" />Analizando...</> : <><WandSparkles className="mr-2 inline h-4 w-4" />Mejorar selección con IA (máx. 10)</>}
         </button>
         <button type="button" onClick={importSelected} disabled={importBusy || busy || !selectedCount} className="rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
-          {importBusy ? 'Guardando borradores...' : `Aprobar e importar (${selectedCount})`}
+          {importBusy ? 'Guardando borradores...' : `Aprobar y publicar (${selectedCount})`}
         </button>
       </div>
-      <p className="text-xs text-stone-500">La búsqueda usa la API oficial de YouTube configurada en el servidor. La IA es opcional y procesa hasta 10 videos por tanda. No se publica nada automáticamente.</p>
+      <p className="text-xs text-stone-500">La búsqueda usa la API oficial de YouTube configurada en el servidor. La IA es opcional y procesa hasta 10 videos por tanda. Solo se publican los videos que selecciones y confirmes con «Aprobar y publicar».</p>
 
       {notice && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
       {error && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
