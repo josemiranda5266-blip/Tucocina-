@@ -13,7 +13,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="space-y-3">
           <div className="flex items-center space-x-2 text-stone-100 font-serif font-bold text-xl"><ChefHat className="w-6 h-6 text-amber-500" /><span>AprendeViendo</span></div>
-          <p className="text-sm text-stone-400 leading-relaxed">Plataforma web para descubrir, buscar y organizar videos de recetas publicados en plataformas externas.</p>
+          <p className="text-sm text-stone-400 leading-relaxed">Plataforma web para descubrir y guardar videos de cocina, oficios y habilidades prácticas publicados en plataformas externas.</p>
         </div>
         <div className="space-y-2">
           <h4 className="text-stone-200 font-semibold text-sm tracking-wide">Contenido de terceros</h4>
