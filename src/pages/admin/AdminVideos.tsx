@@ -301,7 +301,7 @@ export const AdminVideos: React.FC = () => {
               className="bg-stone-50 border border-stone-300 rounded-lg px-3 py-2 text-xs"
             >
               <option value="COCINA">Cocina</option>
-              <option value="OFICIOS">Oficios</option>
+              <option value="OFICIOS">Otros oficios y habilidades</option>
             </select>
           </label>
         </div>
