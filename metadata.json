@@ -1,6 +1,6 @@
 {
-  "name": "CO-Cocina",
-  "description": "Plataforma web para descubrir, buscar y guardar videos de cocina",
+  "name": "AprendeViendo",
+  "description": "Plataforma web para descubrir y guardar videos de cocina, oficios y habilidades prácticas",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
