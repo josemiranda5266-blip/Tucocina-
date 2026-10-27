@@ -82,7 +82,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
       setPopularTotal(result.total);
       window.setTimeout(() => document.getElementById('home-popular')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
     } catch (err) {
-      console.error('Error al cambiar de página de recetas:', err);
+      console.error('Error al cambiar de página de videos:', err);
     } finally {
       setPopularLoading(false);
     }
@@ -132,7 +132,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
         <VideoGrid videos={popularVideos} loading={loading || popularLoading} onVideoSelect={onVideoSelect} emptyTitle="Todavía no hay videos para descubrir" emptyMessage="Pronto se agregarán nuevos contenidos." />
 
         {popularTotalPages > 1 && (
-          <nav aria-label="Paginación de recetas para descubrir" className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <nav aria-label="Paginación de videos para aprender" className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button type="button" onClick={() => loadPopularPage(popularPage - 1)} disabled={popularPage === 1 || popularLoading} className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-white border border-stone-200 text-stone-700 text-sm font-bold hover:border-amber-500 hover:text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed"><ChevronLeft className="w-4 h-4" />Anterior</button>
             <div className="flex items-center gap-1.5" role="list">{pageNumbers.map((page, index) => <React.Fragment key={page}>{index > 0 && page - pageNumbers[index - 1] > 1 && <span className="px-1 text-stone-400" aria-hidden="true">…</span>}{renderPageButton(page)}</React.Fragment>)}</div>
             <button type="button" onClick={() => loadPopularPage(popularPage + 1)} disabled={popularPage === popularTotalPages || popularLoading} className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-white border border-stone-200 text-stone-700 text-sm font-bold hover:border-amber-500 hover:text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed">Siguiente<ChevronRight className="w-4 h-4" /></button>
