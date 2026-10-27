@@ -5,7 +5,7 @@ import { AdSlot } from '../components/ads/AdSlot';
 import { Video, Category } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ChefHat, Flame, Clock, ArrowRight, Shield, ChevronLeft, ChevronRight, Wrench } from 'lucide-react';
+import { ChefHat, Flame, Clock, ArrowRight, Shield, ChevronLeft, ChevronRight, BookOpen, Wrench } from 'lucide-react';
 
 interface HomePageProps {
   onNavigate: (view: string, param?: string) => void;
@@ -107,7 +107,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
 
       <section id="home-hero" className="relative bg-gradient-to-br from-amber-900 via-amber-950 to-stone-900 text-white rounded-3xl p-7 sm:p-10 shadow-2xl overflow-hidden border border-amber-800/40">
         <div className="relative z-10 max-w-3xl space-y-5">
-          <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-300 px-3.5 py-1 rounded-full text-xs font-semibold border border-amber-400/30"><ChefHat className="w-4 h-4" /><span>Aprendizaje práctico en video</span></div>
+          <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-300 px-3.5 py-1 rounded-full text-xs font-semibold border border-amber-400/30"><BookOpen className="w-4 h-4" /><span>Aprendizaje práctico en video</span></div>
           <h1 className="text-3xl sm:text-5xl font-extrabold font-serif leading-tight tracking-tight text-white">Aprendé algo nuevo, paso a paso</h1>
           <p className="text-amber-100/90 text-base sm:text-lg leading-relaxed font-sans">Explorá videos de cocina, oficios y habilidades útiles publicados por sus creadores en YouTube, Instagram y TikTok.</p>
           <SearchBar onSearch={handleSearchSubmit} className="max-w-2xl pt-1" />
