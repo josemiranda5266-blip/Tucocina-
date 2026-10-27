@@ -32,7 +32,7 @@ export const LegalConsentModal: React.FC<LegalConsentModalProps> = ({ onNavigate
             <div className="shrink-0 rounded-xl bg-amber-100 p-3 text-amber-800"><ShieldCheck className="w-6 h-6" /></div>
             <div>
               <h2 id="legal-consent-title" className="text-xl font-bold text-stone-900">Antes de continuar</h2>
-              <p className="mt-1 text-sm text-stone-600">Actualizamos la información legal de CociFlash. Necesitamos registrar tu aceptación para continuar usando tu cuenta.</p>
+              <p className="mt-1 text-sm text-stone-600">Actualizamos la información legal de AprendeViendo. Necesitamos registrar tu aceptación para continuar usando tu cuenta.</p>
             </div>
           </div>
 
