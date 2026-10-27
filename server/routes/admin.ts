@@ -14,12 +14,13 @@ import { importVideosInBulk } from '../services/bulkVideoImport';
 import { YouTubeDiscoveryProvider } from '../services/discovery';
 import { purgeOriginDeletedVideos } from '../services/originCheck';
 import { dbStore, StoredVideo } from '../data/store';
-import { getInvalidTagsForVertical, isCategoryInVertical } from '../services/content/verticals';
+import { getContentVertical, getInvalidTagsForVertical, isCategoryInVertical } from '../services/content/verticals';
 
 const router = Router();
 const MAX_PAGE_SIZE = 50;
 const youtubeDiscoveryProvider = new YouTubeDiscoveryProvider();
 const discoveryLimiter = createDiscoveryRateLimiter(60000, 15);
+const aiAssistLimiter = createDiscoveryRateLimiter(60000, 5);
 
 router.use(authenticateUser);
 router.use(requireAdmin);
@@ -44,7 +45,7 @@ router.get('/videos/ai-assist/status', (_req: AuthenticatedRequest, res: Respons
   return res.json({ enabled: isVideoAiAssistEnabled() });
 });
 
-router.post('/videos/ai-assist/suggest', async (req: AuthenticatedRequest, res: Response) => {
+router.post('/videos/ai-assist/suggest', aiAssistLimiter, async (req: AuthenticatedRequest, res: Response) => {
   if (!isVideoAiAssistEnabled()) {
     return res.status(503).json({ error: { code: 'AI_ASSIST_DISABLED', message: 'El asistente de IA está desactivado. Habilitalo temporalmente con VIDEO_AI_IMPORT_ENABLED=true y configurá GEMINI_API_KEY en el servidor.' } });
   }
@@ -120,7 +121,7 @@ router.post('/videos/ai-assist/suggest', async (req: AuthenticatedRequest, res: 
         thumbnailUrl: item.extracted.thumbnailUrl,
         platform: item.extracted.platform,
         verticalId,
-        categoryId: classification.categoryId || null,
+        categoryId: classification.categoryId || getContentVertical(verticalId).categoryRules[0]?.id || null,
         categoryHint: typeof suggestion?.categoryHint === 'string' ? suggestion.categoryHint.slice(0, 100) : '',
         tags: tags.length ? tags : classification.tags,
       };
