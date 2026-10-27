@@ -118,7 +118,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
             </button>
             <button type="button" onClick={() => onNavigate('search', 'vertical:OFICIOS')} className="flex items-center gap-3 rounded-2xl border border-amber-300/30 bg-white/10 p-4 text-left transition hover:bg-white/15">
               <span className="rounded-xl bg-amber-400/20 p-2.5 text-amber-200"><Wrench className="h-6 w-6" /></span>
-              <span><strong className="block text-sm text-white">Oficios y habilidades</strong><span className="text-xs text-amber-100/80">Aprendé técnicas prácticas</span></span>
+              <span><strong className="block text-sm text-white">Otros oficios y habilidades</strong><span className="text-xs text-amber-100/80">Aprendé técnicas prácticas</span></span>
             </button>
           </div>
         </div>
