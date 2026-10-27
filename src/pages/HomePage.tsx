@@ -5,7 +5,7 @@ import { AdSlot } from '../components/ads/AdSlot';
 import { Video, Category } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ChefHat, Flame, Clock, ArrowRight, Shield, ChevronLeft, ChevronRight, Wrench, BookOpen } from 'lucide-react';
+import { ChefHat, Flame, Clock, ArrowRight, Shield, ChevronLeft, ChevronRight, Wrench } from 'lucide-react';
 
 interface HomePageProps {
   onNavigate: (view: string, param?: string) => void;
