@@ -59,7 +59,7 @@ export class YouTubeConnector implements VideoConnector {
 
     try {
       const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-      const response = await fetch(oembedUrl, { headers: { 'User-Agent': 'Tucocina-Importer/1.0' }, redirect: 'follow', signal: AbortSignal.timeout(5000) });
+      const response = await fetch(oembedUrl, { headers: { 'User-Agent': 'AprendeViendo-Importer/1.0' }, redirect: 'follow', signal: AbortSignal.timeout(5000) });
       if (response.ok) {
         const data = await response.json();
         title = cleanText(data.title, title, 300);
@@ -185,7 +185,7 @@ export class FacebookConnector implements VideoConnector {
       platform: 'FACEBOOK',
       platformVideoId,
       title: 'Video de cocina en Facebook',
-      description: 'Video público de cocina publicado en Facebook. El contenido se reproduce desde Facebook; CociFlash no descarga ni almacena el video.',
+      description: 'Video público publicado en Facebook. El contenido se reproduce desde Facebook; AprendeViendo no descarga ni almacena el video.',
       thumbnailUrl,
       creatorName: 'Creador de Facebook',
     };
