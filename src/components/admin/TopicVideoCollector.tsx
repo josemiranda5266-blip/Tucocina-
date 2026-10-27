@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../../services/api';
 import { Category, ContentVerticalId, Video } from '../../types';
-import { Search, Sparkles, CheckCircle2, XCircle, LoaderCircle, ShieldCheck, ExternalLink, WandSparkles } from 'lucide-react';
+import { Search, XCircle, LoaderCircle, ShieldCheck, ExternalLink, WandSparkles } from 'lucide-react';
 
 type Candidate = {
   url: string;
