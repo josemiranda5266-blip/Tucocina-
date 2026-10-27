@@ -36,8 +36,9 @@ export const AiVideoImportAssistant: React.FC<{ onImportSuccess?: () => void }> 
     let count = 0; const errors: string[] = [];
     for (const item of selected) {
       try {
-        const video: Video = await api.adminImportVideo(item.url, verticalId);
-        if (video.status === 'DUPLICATE') { errors.push('Ya existía: ' + item.title); continue; }
+        const imported = await api.adminImportVideoDetailed(item.url, verticalId);
+        const video = imported.video;
+        if (imported.isDuplicate) { errors.push('Ya existía: ' + item.title); continue; }
         const updates: Partial<Video> = { title: item.title!.trim(), description: (item.description || '').trim(), tags: (item.tags || []).slice(0, 8), status: 'DRAFT' };
         if (item.categoryId) updates.categoryId = item.categoryId;
         await api.adminUpdateVideo(video.id, updates); count++;
