@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChefHat, ExternalLink, ShieldCheck, FileText, Cookie, Copyright, Mail } from 'lucide-react';
+import { BookOpen, ExternalLink, ShieldCheck, FileText, Cookie, Copyright, Mail } from 'lucide-react';
 
 interface FooterProps {
   onNavigate?: (view: string, param?: string) => void;
@@ -12,7 +12,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     <footer id="main-footer" className="bg-stone-900 text-stone-400 border-t border-stone-800 py-12 px-4 sm:px-6 lg:px-8 mt-auto">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="space-y-3">
-          <div className="flex items-center space-x-2 text-stone-100 font-serif font-bold text-xl"><ChefHat className="w-6 h-6 text-amber-500" /><span>AprendeViendo</span></div>
+          <div className="flex items-center space-x-2 text-stone-100 font-serif font-bold text-xl"><BookOpen className="w-6 h-6 text-amber-500" /><span>AprendeViendo</span></div>
           <p className="text-sm text-stone-400 leading-relaxed">Plataforma web para descubrir y guardar videos de cocina, oficios y habilidades prácticas publicados en plataformas externas.</p>
         </div>
         <div className="space-y-2">
