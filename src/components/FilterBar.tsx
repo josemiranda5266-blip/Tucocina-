@@ -31,7 +31,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         
         <div className="flex items-center space-x-2 text-stone-800 font-bold text-sm">
           <SlidersHorizontal className="w-4 h-4 text-amber-600" />
-          <span>Filtrar Recetas</span>
+          <span>Filtrar videos</span>
         </div>
 
         {hasActiveFilters && (
