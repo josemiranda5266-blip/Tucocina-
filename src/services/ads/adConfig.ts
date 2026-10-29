@@ -29,7 +29,8 @@ export function getAdConfig(): AdConfig {
   const envProvider = rawProvider || 'none';
 
   const rawPublisherId = (metaEnv?.VITE_ADSENSE_PUBLISHER_ID ?? procEnv?.VITE_ADSENSE_PUBLISHER_ID) as string | undefined;
-  const envPublisherId = rawPublisherId || '';
+  const envPublisherId = (rawPublisherId || '').trim();
+  const validPublisherId = /^ca-pub-[0-9]{16}$/.test(envPublisherId);
 
   // Validate provider string
   const validProvider = (['none', 'adsense', 'direct_sponsor'].includes(envProvider)
@@ -40,12 +41,12 @@ export function getAdConfig(): AdConfig {
   const isFullyConfigured =
     envEnabled &&
     validProvider !== 'none' &&
-    (validProvider !== 'adsense' || Boolean(envPublisherId && envPublisherId.trim() !== ''));
+    (validProvider !== 'adsense' || validPublisherId);
 
   return {
     enabled: isFullyConfigured,
     provider: isFullyConfigured ? validProvider : 'none',
-    publisherId: envPublisherId || undefined,
+    publisherId: validPublisherId ? envPublisherId : undefined,
     placements: defaultPlacementsConfig,
   };
 }
