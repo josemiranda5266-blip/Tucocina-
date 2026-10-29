@@ -57,7 +57,7 @@ export const AdminVideos: React.FC = () => {
   const [saveLoading, setSaveLoading] = useState(false);
 
   useEffect(() => {
-    const verticalId = editingVideo?.verticalId || 'COCINA';
+    const verticalId = 'COCINA' as const;
     api.getCategories(verticalId).then(setCategories).catch(() => setCategories([]));
   }, [editingVideo?.verticalId]);
 
