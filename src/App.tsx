@@ -19,6 +19,8 @@ import { AdminReports } from './pages/admin/AdminReports';
 import { QuickVideoManager } from './components/admin/QuickVideoManager';
 import { Video } from './types';
 import { track, trackPageView, trackSessionStart } from './services/analytics';
+import { getAdConfig } from './services/ads/adConfig';
+import { getAdProvider } from './services/ads/AdProvider';
 
 type AppLocation = { view: string; param: string };
 function safeDecode(value: string): string { try { return decodeURIComponent(value); } catch { return ''; } }
@@ -61,6 +63,13 @@ export const AppContent: React.FC = () => {
     return tab === 'videos' || tab === 'import' || tab === 'reports' ? tab : 'dashboard';
   });
   const needsLegalAcceptance = Boolean(!loading && user && (!profile || profile.legalVersion !== CURRENT_LEGAL_VERSION));
+
+  useEffect(() => {
+    // No se solicita publicidad hasta habilitarla explícitamente y configurar un publisher ID válido.
+    const config = getAdConfig();
+    if (!config.enabled || config.provider !== 'adsense') return;
+    void getAdProvider('adsense').init(config);
+  }, []);
 
   useEffect(() => {
     // Wait for Firebase auth to resolve before starting analytics. If this
