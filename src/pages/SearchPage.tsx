@@ -29,12 +29,12 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
   let parsedSearch = initialQuery;
   let initialVertical: ContentVerticalId = 'COCINA';
   if (initialQuery.startsWith('vertical:')) {
-    initialVertical = initialQuery.replace('vertical:', '') === 'OFICIOS' ? 'OFICIOS' : 'COCINA';
+    initialVertical = 'COCINA';
     parsedSearch = '';
   }
   if (initialQuery.startsWith('cat:')) {
     parsedCategory = initialQuery.replace('cat:', '');
-    initialVertical = parsedCategory.startsWith('of-') ? 'OFICIOS' : 'COCINA';
+    initialVertical = 'COCINA';
     parsedSearch = '';
   }
   const [verticalId, setVerticalId] = useState<ContentVerticalId>(initialVertical);
@@ -120,14 +120,14 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="space-y-2"><h1 className="text-3xl font-extrabold font-serif text-stone-900">Buscador de AprendeViendo</h1><p className="text-stone-600 text-sm">Encontrá tutoriales de cocina, oficios y habilidades prácticas por nombre, tema, creador o etiquetas.</p>
+      <div className="space-y-2"><h1 className="text-3xl font-extrabold font-serif text-stone-900">Buscador de CociFlash</h1><p className="text-stone-600 text-sm">Encontrá recetas y videos de cocina por nombre, tema, creador o etiquetas.</p>
         <div className="inline-flex flex-wrap gap-2 rounded-xl bg-stone-100 p-1" aria-label="Área de aprendizaje">
           <button type="button" onClick={() => handleVerticalChange('COCINA')} aria-pressed={verticalId === 'COCINA'} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${verticalId === 'COCINA' ? 'bg-amber-700 text-white shadow-sm' : 'text-stone-700 hover:bg-white'}`}>Cocina y pastelería</button>
-          <button type="button" onClick={() => handleVerticalChange('OFICIOS')} aria-pressed={verticalId === 'OFICIOS'} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${verticalId === 'OFICIOS' ? 'bg-amber-700 text-white shadow-sm' : 'text-stone-700 hover:bg-white'}`}>Oficios y habilidades</button>
+          
         </div></div>
       <SearchBar initialValue={searchQuery} onSearch={handleSearch} />
       <FilterBar categories={categories} selectedCategory={selectedCategory} selectedPlatform={selectedPlatform} selectedSort={selectedSort} onCategoryChange={(cat) => { setSelectedCategory(cat); setSearchQuery(''); resetPagination(); if (cat) track('view_category', { categoryId: cat }); }} onPlatformChange={(plat) => { setSelectedPlatform(plat); setSearchQuery(''); resetPagination(); }} onSortChange={(sort) => { setSelectedSort(sort); resetPagination(); }} onReset={handleResetFilters} />
-      {hasActiveFilters && <div className="text-xs text-stone-500">{searchQuery.trim() ? `Buscando “${searchQuery.trim()}” en ${verticalId === 'COCINA' ? 'cocina y pastelería' : 'oficios y habilidades'}.` : 'Hay filtros activos en el catálogo.'}</div>}
+      {hasActiveFilters && <div className="text-xs text-stone-500">{searchQuery.trim() ? `Buscando “${searchQuery.trim()}” en $cocina y pastelería.` : 'Hay filtros activos en el catálogo.'}</div>}
       {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>}
       <AdSlot placement="SEARCH_MIDDLE" />
       <VideoGrid videos={videos} loading={loading} onVideoSelect={handleSearchResultSelect} />
