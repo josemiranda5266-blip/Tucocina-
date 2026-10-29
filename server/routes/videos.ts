@@ -11,11 +11,11 @@ function parseLimit(value: unknown, fallback = 12): number {
   return Number.isFinite(parsed) ? Math.min(MAX_PAGE_SIZE, Math.max(1, parsed)) : fallback;
 }
 
-function parseVertical(value: unknown): 'COCINA' | 'OFICIOS' {
-  return value === 'OFICIOS' ? 'OFICIOS' : 'COCINA';
+function parseVertical(_value: unknown): 'COCINA' {
+  return 'COCINA';
 }
 
-function requirePublishedVideo(videoId: string, verticalId: 'COCINA' | 'OFICIOS' = 'COCINA') {
+function requirePublishedVideo(videoId: string, verticalId: 'COCINA' = 'COCINA') {
   const video = dbStore.getVideoById(videoId);
   return video && video.status === 'PUBLISHED' && (video.verticalId || 'COCINA') === verticalId ? video : null;
 }
@@ -89,7 +89,7 @@ router.post('/:id/comments', authenticateUser, async (req: AuthenticatedRequest,
       id: `comment-${randomUUID()}`,
       videoId,
       userId,
-      userName: req.user?.displayName || req.user?.email || 'Usuario de AprendeViendo',
+      userName: req.user?.displayName || req.user?.email || 'Usuario de CociFlash',
       userPhoto: req.user?.photoURL || undefined,
       text: sanitizedText,
       createdAt: new Date().toISOString(),

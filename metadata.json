@@ -1,6 +1,6 @@
 {
-  "name": "AprendeViendo",
-  "description": "Plataforma web para descubrir y guardar videos de cocina, oficios y habilidades prácticas",
+  "name": "CociFlash",
+  "description": "Plataforma web para descubrir y guardar videos de cocina, recetas y pastelería",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
