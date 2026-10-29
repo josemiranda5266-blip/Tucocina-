@@ -25,8 +25,7 @@ export class NullAdProvider implements IAdProvider {
 }
 
 /**
- * Future AdSense provider stub.
- * Unimplemented until an official AdSense account is created, approved, and configured.
+ * AdSense provider: carga el script oficial solo cuando la configuración está habilitada.
  */
 export class AdsenseProvider implements IAdProvider {
   readonly name = 'adsense';
@@ -36,7 +35,19 @@ export class AdsenseProvider implements IAdProvider {
       console.warn('[AdProvider] AdSense initialization skipped: missing publisher ID.');
       return;
     }
-    // Future AdSense script injection logic will be implemented here when approved.
+    if (typeof document === 'undefined') return;
+    if (!/^ca-pub-[0-9]{16}$/.test(config.publisherId)) {
+      console.warn('[AdProvider] AdSense initialization skipped: publisher ID format is invalid.');
+      return;
+    }
+    if (document.querySelector('script[data-cociflash-adsense="true"]')) return;
+    const script = document.createElement('script');
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.dataset.cociflashAdsense = 'true';
+    script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(config.publisherId);
+    script.onerror = () => { console.error('[AdProvider] No se pudo cargar el script oficial de Google AdSense.'); script.remove(); };
+    document.head.appendChild(script);
   }
 
   renderSlot(props: AdSlotProps, config: AdConfig): React.ReactNode {
@@ -49,7 +60,7 @@ export class AdsenseProvider implements IAdProvider {
       return null;
     }
 
-    // Future AdSense <ins className="adsbygoogle" ...> component
+    // Los anuncios automáticos se administran desde AdSense. No se inventan IDs de unidades manuales.
     return null;
   }
 }
