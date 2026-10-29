@@ -40,7 +40,7 @@ export const AdminVideos: React.FC = () => {
 
   // Import bulk state
   const [bulkUrls, setBulkUrls] = useState('');
-  const [bulkVerticalId, setBulkVerticalId] = useState<'COCINA' | 'OFICIOS'>('COCINA');
+  const [bulkVerticalId, setBulkVerticalId] = useState<'COCINA'>('COCINA');
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkResults, setBulkResults] = useState<BulkResult[]>([]);
   const [purgingDuplicates, setPurgingDuplicates] = useState(false);
@@ -304,11 +304,10 @@ export const AdminVideos: React.FC = () => {
             Vertical
             <select
               value={bulkVerticalId}
-              onChange={(e) => setBulkVerticalId(e.target.value as 'COCINA' | 'OFICIOS')}
+              onChange={() => setBulkVerticalId('COCINA')}
               className="bg-stone-50 border border-stone-300 rounded-lg px-3 py-2 text-xs"
             >
               <option value="COCINA">Cocina</option>
-              <option value="OFICIOS">Otros oficios y habilidades</option>
             </select>
           </label>
         </div>
