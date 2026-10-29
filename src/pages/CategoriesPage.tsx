@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Category, ContentVerticalId } from '../types';
+import { Category } from '../types';
 import { CategoryCard } from '../components/CategoryCard';
 import { AdSlot } from '../components/ads/AdSlot';
 import { api } from '../services/api';
@@ -11,15 +11,14 @@ interface CategoriesPageProps {
 
 export const CategoriesPage: React.FC<CategoriesPageProps> = ({ onCategorySelect }) => {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [verticalId, setVerticalId] = useState<ContentVerticalId>('COCINA');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getCategories(verticalId)
+    api.getCategories('COCINA')
       .then(setCategories)
       .catch((err) => console.error('Error al cargar categorías:', err))
       .finally(() => setLoading(false));
-  }, [verticalId]);
+  }, []);
 
   return (
     <div className="space-y-6 pb-12">
@@ -32,11 +31,7 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ onCategorySelect
             Categorías para aprender
           </h1>
         </div>
-        <p className="text-stone-600 text-sm">Elegí un área y explorá videos prácticos para aprender a tu ritmo.</p>
-        <div className="inline-flex flex-wrap gap-2 rounded-xl bg-stone-100 p-1">
-          <button type="button" onClick={() => setVerticalId('COCINA')} aria-pressed={verticalId === 'COCINA'} className={`rounded-lg px-4 py-2 text-sm font-semibold ${verticalId === 'COCINA' ? 'bg-amber-700 text-white shadow-sm' : 'text-stone-700 hover:bg-white'}`}>Cocina y pastelería</button>
-          <button type="button" onClick={() => setVerticalId('OFICIOS')} aria-pressed={verticalId === 'OFICIOS'} className={`rounded-lg px-4 py-2 text-sm font-semibold ${verticalId === 'OFICIOS' ? 'bg-amber-700 text-white shadow-sm' : 'text-stone-700 hover:bg-white'}`}>Otros oficios y habilidades</button>
-        </div>
+        <p className="text-stone-600 text-sm">Explorá categorías de recetas, cocina y pastelería.</p>
       </div>
 
       {/* Category AdSlot Placement (Inert when ads.enabled === false) */}
