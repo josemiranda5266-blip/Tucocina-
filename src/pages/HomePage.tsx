@@ -5,7 +5,7 @@ import { AdSlot } from '../components/ads/AdSlot';
 import { Video, Category } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ChefHat, Flame, Clock, ArrowRight, Shield, ChevronLeft, ChevronRight, BookOpen, Wrench } from 'lucide-react';
+import { ChefHat, Flame, Clock, ArrowRight, Shield, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
 
 interface HomePageProps {
   onNavigate: (view: string, param?: string) => void;
@@ -107,18 +107,14 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
 
       <section id="home-hero" className="relative bg-gradient-to-br from-amber-900 via-amber-950 to-stone-900 text-white rounded-3xl p-7 sm:p-10 shadow-2xl overflow-hidden border border-amber-800/40">
         <div className="relative z-10 max-w-3xl space-y-5">
-          <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-300 px-3.5 py-1 rounded-full text-xs font-semibold border border-amber-400/30"><BookOpen className="w-4 h-4" /><span>Aprendizaje práctico en video</span></div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold font-serif leading-tight tracking-tight text-white">Aprendé algo nuevo, paso a paso</h1>
-          <p className="text-amber-100/90 text-base sm:text-lg leading-relaxed font-sans">Explorá videos de cocina, oficios y habilidades útiles publicados por sus creadores en YouTube, Instagram y TikTok.</p>
+          <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-300 px-3.5 py-1 rounded-full text-xs font-semibold border border-amber-400/30"><BookOpen className="w-4 h-4" /><span>Recetas y cocina en video</span></div>
+          <h1 className="text-3xl sm:text-5xl font-extrabold font-serif leading-tight tracking-tight text-white">Descubrí nuevas recetas, paso a paso</h1>
+          <p className="text-amber-100/90 text-base sm:text-lg leading-relaxed font-sans">Explorá recetas, técnicas de cocina y pastelería en videos publicados por sus creadores en YouTube, Instagram y TikTok.</p>
           <SearchBar onSearch={handleSearchSubmit} className="max-w-2xl pt-1" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <button type="button" onClick={() => onNavigate('search', 'vertical:COCINA')} className="flex items-center gap-3 rounded-2xl border border-amber-300/30 bg-white/10 p-4 text-left transition hover:bg-white/15">
               <span className="rounded-xl bg-amber-400/20 p-2.5 text-amber-200"><ChefHat className="h-6 w-6" /></span>
               <span><strong className="block text-sm text-white">Cocina y pastelería</strong><span className="text-xs text-amber-100/80">Recetas, panadería y técnicas</span></span>
-            </button>
-            <button type="button" onClick={() => onNavigate('search', 'vertical:OFICIOS')} className="flex items-center gap-3 rounded-2xl border border-amber-300/30 bg-white/10 p-4 text-left transition hover:bg-white/15">
-              <span className="rounded-xl bg-amber-400/20 p-2.5 text-amber-200"><Wrench className="h-6 w-6" /></span>
-              <span><strong className="block text-sm text-white">Otros oficios y habilidades</strong><span className="text-xs text-amber-100/80">Aprendé técnicas prácticas</span></span>
             </button>
           </div>
         </div>
