@@ -31,10 +31,10 @@ function parseLimit(value: unknown, fallback = 20): number {
 }
 
 const ReportStatusSchema = z.object({ status: z.enum(['OPEN', 'REVIEWED', 'RESOLVED', 'REJECTED']) });
-const BulkImportSchema = z.object({ urls: z.array(z.string().url()).min(1).max(25), verticalId: z.enum(['COCINA', 'OFICIOS']).default('COCINA') });
+const BulkImportSchema = z.object({ urls: z.array(z.string().url()).min(1).max(25), verticalId: z.enum(['COCINA']).default('COCINA') });
 const AiAssistSchema = z.object({
   urls: z.array(z.string().url()).min(1).max(10),
-  verticalId: z.enum(['COCINA', 'OFICIOS']).default('COCINA'),
+  verticalId: z.enum(['COCINA']).default('COCINA'),
 });
 
 function isVideoAiAssistEnabled(): boolean {
@@ -75,11 +75,11 @@ router.post('/videos/ai-assist/suggest', aiAssistLimiter, async (req: Authentica
       platform: item.extracted.platform,
     }));
     const prompt = [
-      'Sos un asistente editorial privado para el administrador de AprendeViendo. No publiques ni importes nada.',
+      'Sos un asistente editorial privado para el administrador de CociFlash. No publiques ni importes nada.',
       'A partir de los metadatos proporcionados, propone una ficha en español rioplatense. No inventes hechos específicos que no estén respaldados por el título o descripción.',
       'Devuelve SOLO JSON válido con la forma {"items":[{"index":0,"title":"...","description":"...","tags":["..."],"categoryHint":"..."}]}.',
       'El título debe ser claro y fiel al contenido; descripción breve; 3 a 6 etiquetas relevantes; categoryHint una categoría corta.',
-      'Vertical elegida: ' + (verticalId === 'COCINA' ? 'Cocina y pastelería' : 'Otros oficios y habilidades') + '.',
+      'Vertical elegida: ' + (verticalId === 'COCINA' ? 'Cocina y pastelería' : 'Cocina y pastelería') + '.',
       'Si el metadato es genérico o no permite saber el contenido, conserva un título prudente y acláralo brevemente en la descripción.',
       JSON.stringify(input),
     ].join('\n\n');
