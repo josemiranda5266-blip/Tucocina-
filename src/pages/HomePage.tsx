@@ -105,11 +105,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
 
       <AdSlot placement="HOME_TOP" />
 
-      <section id="home-hero" className="relative bg-gradient-to-br from-amber-900 via-amber-950 to-stone-900 text-white rounded-3xl p-7 sm:p-10 shadow-2xl overflow-hidden border border-amber-800/40">
+      <section id="home-hero" className="hero-pan relative bg-stone-950 text-white rounded-3xl p-7 sm:p-10 lg:p-14 shadow-2xl overflow-hidden border border-amber-800/40" style={{ backgroundImage: "linear-gradient(105deg, rgba(28, 18, 10, .94) 0%, rgba(58, 30, 12, .82) 48%, rgba(28, 18, 10, .35) 100%), url(https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=2000&q=85)", backgroundSize: "cover", backgroundPosition: "center" }}>
+        <div className="hero-orb hero-orb-one" aria-hidden="true" />
+        <div className="hero-orb hero-orb-two" aria-hidden="true" />
         <div className="relative z-10 max-w-3xl space-y-5">
           <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-300 px-3.5 py-1 rounded-full text-xs font-semibold border border-amber-400/30"><BookOpen className="w-4 h-4" /><span>Recetas y cocina en video</span></div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold font-serif leading-tight tracking-tight text-white">Descubrí nuevas recetas, paso a paso</h1>
-          <p className="text-amber-100/90 text-base sm:text-lg leading-relaxed font-sans">Explorá recetas, técnicas de cocina y pastelería en videos publicados por sus creadores en YouTube, Instagram y TikTok.</p>
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold font-serif leading-tight tracking-tight text-white max-w-3xl">Inspirate, cociná y descubrí tu próxima receta favorita</h1>
+          <p className="text-amber-100/90 text-base sm:text-lg leading-relaxed font-sans">Encontrá ideas para todos los días, descubrí técnicas culinarias y explorá videos de cocina publicados por sus creadores.</p>
           <SearchBar onSearch={handleSearchSubmit} className="max-w-2xl pt-1" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <button type="button" onClick={() => onNavigate('search', 'vertical:COCINA')} className="flex items-center gap-3 rounded-2xl border border-amber-300/30 bg-white/10 p-4 text-left transition hover:bg-white/15">
@@ -139,6 +141,32 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
       <section id="home-recent" className="space-y-4">
         <div className="flex items-center space-x-2"><Clock className="w-5 h-5 text-stone-700" /><h2 className="text-2xl font-bold font-serif text-stone-900">Nuevas Recetas Agregadas</h2></div>
         <VideoGrid videos={recentVideos} loading={loading} onVideoSelect={onVideoSelect} emptyTitle="Sin recetas recientes" emptyMessage="Pronto se publicarán nuevos videos de cocina." />
+      </section>
+
+      <section id="cociflash-consejos" className="rounded-3xl border border-amber-100 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-6 sm:p-9">
+        <div className="max-w-3xl">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-800">La cocina, mejor entendida</p>
+          <h2 className="mt-2 text-2xl sm:text-3xl font-extrabold font-serif text-stone-900">Pequeños consejos que mejoran cada receta</h2>
+          <p className="mt-3 text-sm sm:text-base leading-relaxed text-stone-600">Además de mirar videos, conocer algunas bases te ayuda a cocinar con más confianza, aprovechar los ingredientes y trabajar de forma segura.</p>
+        </div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <article className="group rounded-2xl border border-stone-200/80 bg-white/90 p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+            <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-amber-100 text-amber-900"><ChefHat className="h-5 w-5" /></span><h3 className="text-base font-bold text-stone-900">Prepará todo antes de empezar</h3></div>
+            <p className="mt-3 text-sm leading-relaxed text-stone-600">Leé la receta completa, pesá los ingredientes y dejá a mano los utensilios. Esta preparación previa reduce olvidos, evita que algo se queme mientras buscás otro ingrediente y te permite concentrarte en los tiempos de cocción.</p>
+          </article>
+          <article className="group rounded-2xl border border-stone-200/80 bg-white/90 p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+            <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-100 text-emerald-900"><Shield className="h-5 w-5" /></span><h3 className="text-base font-bold text-stone-900">Separá alimentos crudos y cocidos</h3></div>
+            <p className="mt-3 text-sm leading-relaxed text-stone-600">Usá tablas y utensilios limpios para las preparaciones listas para comer. Evitá que los jugos de carnes crudas entren en contacto con verduras, pan o alimentos ya cocidos, y lavate las manos después de manipularlos.</p>
+          </article>
+          <article className="group rounded-2xl border border-stone-200/80 bg-white/90 p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+            <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-orange-100 text-orange-900"><Clock className="h-5 w-5" /></span><h3 className="text-base font-bold text-stone-900">Respetá el reposo y la temperatura</h3></div>
+            <p className="mt-3 text-sm leading-relaxed text-stone-600">No todas las preparaciones terminan al salir del fuego. Algunas carnes necesitan reposar para conservar mejor sus jugos; las masas pueden requerir descanso para hidratarse y relajarse. Seguí las indicaciones específicas de cada receta y cociná completamente los alimentos de riesgo.</p>
+          </article>
+          <article className="group rounded-2xl border border-stone-200/80 bg-white/90 p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+            <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-sky-100 text-sky-900"><BookOpen className="h-5 w-5" /></span><h3 className="text-base font-bold text-stone-900">Ajustá el sabor de a poco</h3></div>
+            <p className="mt-3 text-sm leading-relaxed text-stone-600">Agregá sal, acidez, especias y picante gradualmente, probando cuando sea seguro hacerlo. Unas gotas de limón o vinagre pueden equilibrar una preparación pesada; las hierbas frescas suelen aportar más aroma si se incorporan cerca del final.</p>
+          </article>
+        </div>
       </section>
     </div>
   );

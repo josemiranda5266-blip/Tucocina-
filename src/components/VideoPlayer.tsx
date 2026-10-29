@@ -67,7 +67,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ video, compact = false
     const shareUrl = window.location.href;
     const shareData = {
       title: video.title,
-      text: `Mirá este video en AprendeViendo: ${video.title}`,
+      text: `Mirá este video en CociFlash: ${video.title}`,
       url: shareUrl,
     };
 

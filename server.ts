@@ -33,7 +33,7 @@ app.use((_req, res, next) => {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com; frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.facebook.com; font-src 'self' data: https:;"
+      "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net; frame-src 'self' https://accounts.google.com https://*.firebaseapp.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.facebook.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com; font-src 'self' data: https:;"
     );
   }
   next();
@@ -81,6 +81,37 @@ app.use('/api', apiLimiter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Public crawler endpoints. ads.txt is emitted only when a real publisher ID is configured.
+app.get('/ads.txt', (_req, res) => {
+  const configuredId = (process.env.ADSENSE_PUBLISHER_ID || process.env.VITE_ADSENSE_PUBLISHER_ID || '').trim();
+  const publisherId = configuredId.startsWith('ca-') ? configuredId.slice(3) : configuredId;
+  if (!/^pub-[0-9]{16}$/.test(publisherId)) {
+    return res.status(404).type('text/plain').send('AdSense publisher ID is not configured.\\n');
+  }
+  return res.type('text/plain').send('google.com, ' + publisherId + ', DIRECT, f08c47fec0942fa0\\n');
+});
+
+app.get('/robots.txt', (_req, res) => {
+  return res.type('text/plain').send(
+    'User-agent: *\\nAllow: /\\nDisallow: /admin\\nDisallow: /favoritos\\nSitemap: https://www.cociflash.com/sitemap.xml\\n'
+  );
+});
+
+app.get('/sitemap.xml', (_req, res) => {
+  const urls = [
+    'https://www.cociflash.com/',
+    'https://www.cociflash.com/buscar',
+    'https://www.cociflash.com/categorias',
+    'https://www.cociflash.com/contacto',
+    'https://www.cociflash.com/legal/privacidad',
+    'https://www.cociflash.com/legal/terminos',
+    'https://www.cociflash.com/legal/cookies',
+    'https://www.cociflash.com/legal/contenido',
+  ];
+  const entries = urls.map((url) => '<url><loc>' + url + '</loc></url>').join('');
+  return res.type('application/xml').send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + entries + '</urlset>');
 });
 
 app.use('/api/videos', videoRoutes);

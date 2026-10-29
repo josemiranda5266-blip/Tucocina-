@@ -61,6 +61,7 @@ const PrivacyContent = () => (
 
     <h2>4. Proveedores y terceros</h2>
     <p>CociFlash utiliza servicios tecnológicos de terceros para operar la plataforma, entre ellos Google/Firebase para autenticación y almacenamiento, Render para alojamiento del servidor y Cloudflare para infraestructura de dominio/DNS y correo de recepción. Los videos permanecen en las plataformas de origen y pueden utilizar sus propios mecanismos de seguimiento y políticas de privacidad.</p>
+    <p>Si se habilita Google AdSense, Google y sus socios podrán tratar datos técnicos y utilizar cookies o tecnologías similares para mostrar, limitar, medir o personalizar anuncios conforme a la configuración y normativa aplicables. La publicidad permanecerá desactivada hasta que el responsable configure el editor y revise los mecanismos de consentimiento requeridos para las regiones atendidas.</p>
     <p>Cuando seguís un enlace o utilizás un reproductor de una plataforma externa, esa plataforma puede tratar información directamente bajo sus propias condiciones.</p>
 
     <h2>5. Conservación, eliminación y seguridad</h2>
@@ -100,7 +101,8 @@ const CookiesContent = () => (
     <h2>2. Qué medimos</h2><p>Podemos registrar eventos agregados como visitas de página, apertura y reproducción de videos, búsquedas, favoritos, compartidos, inicios de sesión y registros. También pueden registrarse de forma agregada el tipo de dispositivo y, cuando la infraestructura lo proporciona, el país de conexión.</p>
     <h2>3. Para qué</h2><p>La finalidad es conocer el funcionamiento y utilización general de CociFlash, detectar problemas, mejorar la experiencia y evaluar qué contenidos y funciones son útiles. La analítica propia está diseñada para evitar almacenar deliberadamente direcciones IP completas o correos electrónicos como parte de los eventos.</p>
     <h2>4. Servicios externos</h2><p>Los reproductores, enlaces y servicios de terceros pueden utilizar sus propias cookies, almacenamiento o tecnologías de seguimiento. Esos tratamientos dependen de la plataforma correspondiente y no están controlados por CociFlash.</p>
-    <h2>5. Control del usuario</h2><p>Podés eliminar los datos de almacenamiento local desde la configuración del navegador. Esto puede generar un nuevo identificador anónimo y afectar algunas mediciones, pero no elimina por sí mismo los datos de una cuenta de CociFlash almacenados en el servidor.</p>
+    <h2>5. Publicidad</h2><p>Si CociFlash habilita anuncios de Google AdSense, Google y sus socios publicitarios podrán utilizar cookies o tecnologías similares para mostrar, medir y personalizar anuncios según la configuración aplicable. La disponibilidad y personalización de esos anuncios dependen de la configuración publicitaria, la región y las opciones de privacidad del usuario. Esta sección deberá mantenerse actualizada antes de activar la publicidad y se aplicarán los mecanismos de consentimiento que correspondan.</p>
+    <h2>6. Control del usuario</h2><p>Podés eliminar los datos de almacenamiento local desde la configuración del navegador. Esto puede generar un nuevo identificador anónimo y afectar algunas mediciones, pero no elimina por sí mismo los datos de una cuenta de CociFlash almacenados en el servidor.</p>
   </>
 );
 

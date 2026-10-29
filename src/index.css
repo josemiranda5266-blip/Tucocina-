@@ -1,1 +1,35 @@
 @import "tailwindcss";
+
+
+/* CociFlash: movimiento decorativo discreto, con respeto a las preferencias de accesibilidad. */
+.hero-pan {
+  background-repeat: no-repeat;
+  animation: hero-image-drift 28s ease-in-out infinite alternate;
+  isolation: isolate;
+}
+.hero-orb {
+  position: absolute;
+  z-index: 0;
+  width: clamp(8rem, 18vw, 18rem);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(251, 191, 36, .25), rgba(251, 191, 36, 0) 70%);
+  filter: blur(4px);
+  animation: hero-orb-float 12s ease-in-out infinite alternate;
+}
+.hero-orb-one { right: 8%; top: -22%; }
+.hero-orb-two { right: 25%; bottom: -42%; animation-delay: -5s; opacity: .65; }
+#home-hero .hero-orb ~ div { position: relative; }
+@keyframes hero-image-drift {
+  from { background-position: 48% center; }
+  to { background-position: 55% center; }
+}
+@keyframes hero-orb-float {
+  from { transform: translate3d(0, 0, 0) scale(.94); }
+  to { transform: translate3d(-18px, 14px, 0) scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-pan, .hero-orb { animation: none !important; }
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
