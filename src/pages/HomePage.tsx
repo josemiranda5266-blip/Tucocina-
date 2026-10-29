@@ -105,11 +105,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onVideoSelect })
 
       <AdSlot placement="HOME_TOP" />
 
-      <section id="home-hero" className="relative bg-gradient-to-br from-amber-900 via-amber-950 to-stone-900 text-white rounded-3xl p-7 sm:p-10 shadow-2xl overflow-hidden border border-amber-800/40">
+      <section id="home-hero" className="hero-pan relative bg-stone-950 text-white rounded-3xl p-7 sm:p-10 lg:p-14 shadow-2xl overflow-hidden border border-amber-800/40" style={{ backgroundImage: "linear-gradient(105deg, rgba(28, 18, 10, .94) 0%, rgba(58, 30, 12, .82) 48%, rgba(28, 18, 10, .35) 100%), url(https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=2000&q=85)", backgroundSize: "cover", backgroundPosition: "center" }}>
+        <div className="hero-orb hero-orb-one" aria-hidden="true" />
+        <div className="hero-orb hero-orb-two" aria-hidden="true" />
         <div className="relative z-10 max-w-3xl space-y-5">
           <div className="inline-flex items-center space-x-2 bg-amber-500/20 text-amber-300 px-3.5 py-1 rounded-full text-xs font-semibold border border-amber-400/30"><BookOpen className="w-4 h-4" /><span>Recetas y cocina en video</span></div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold font-serif leading-tight tracking-tight text-white">Descubrí nuevas recetas, paso a paso</h1>
-          <p className="text-amber-100/90 text-base sm:text-lg leading-relaxed font-sans">Explorá recetas, técnicas de cocina y pastelería en videos publicados por sus creadores en YouTube, Instagram y TikTok.</p>
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold font-serif leading-tight tracking-tight text-white max-w-3xl">Inspirate, cociná y descubrí tu próxima receta favorita</h1>
+          <p className="text-amber-100/90 text-base sm:text-lg leading-relaxed font-sans">Encontrá ideas para todos los días, descubrí técnicas culinarias y explorá videos de cocina publicados por sus creadores.</p>
           <SearchBar onSearch={handleSearchSubmit} className="max-w-2xl pt-1" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <button type="button" onClick={() => onNavigate('search', 'vertical:COCINA')} className="flex items-center gap-3 rounded-2xl border border-amber-300/30 bg-white/10 p-4 text-left transition hover:bg-white/15">
