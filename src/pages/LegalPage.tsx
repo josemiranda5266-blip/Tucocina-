@@ -61,6 +61,7 @@ const PrivacyContent = () => (
 
     <h2>4. Proveedores y terceros</h2>
     <p>CociFlash utiliza servicios tecnológicos de terceros para operar la plataforma, entre ellos Google/Firebase para autenticación y almacenamiento, Render para alojamiento del servidor y Cloudflare para infraestructura de dominio/DNS y correo de recepción. Los videos permanecen en las plataformas de origen y pueden utilizar sus propios mecanismos de seguimiento y políticas de privacidad.</p>
+    <p>Si se habilita Google AdSense, Google y sus socios podrán tratar datos técnicos y utilizar cookies o tecnologías similares para mostrar, limitar, medir o personalizar anuncios conforme a la configuración y normativa aplicables. La publicidad permanecerá desactivada hasta que el responsable configure el editor y revise los mecanismos de consentimiento requeridos para las regiones atendidas.</p>
     <p>Cuando seguís un enlace o utilizás un reproductor de una plataforma externa, esa plataforma puede tratar información directamente bajo sus propias condiciones.</p>
 
     <h2>5. Conservación, eliminación y seguridad</h2>
