@@ -21,6 +21,36 @@ import { Video } from './types';
 import { track, trackPageView, trackSessionStart } from './services/analytics';
 
 type AppLocation = { view: string; param: string };
+
+class AppErrorBoundary extends React.Component<React.PropsWithChildren, { error: Error | null }> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[CociFlash] Error al renderizar la interfaz:', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <main role="alert" style={{ maxWidth: 680, margin: '10vh auto', padding: 24, fontFamily: 'system-ui, sans-serif', color: '#292524' }}>
+          <h1 style={{ fontSize: 24, marginBottom: 12 }}>No se pudo cargar CociFlash</h1>
+          <p style={{ lineHeight: 1.6 }}>La aplicación encontró un error al mostrar la página. Tus videos y datos no fueron modificados.</p>
+          <details style={{ margin: '16px 0', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+            <summary>Ver detalle técnico</summary>
+            <code>{this.state.error.message}</code>
+          </details>
+          <button type="button" onClick={() => window.location.reload()} style={{ padding: '10px 16px', borderRadius: 8, border: 0, background: '#92400e', color: '#fff', cursor: 'pointer' }}>Volver a intentar</button>
+        </main>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function safeDecode(value: string): string { try { return decodeURIComponent(value); } catch { return ''; } }
 function readLocation(): AppLocation {
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
@@ -61,6 +91,10 @@ export const AppContent: React.FC = () => {
     return tab === 'videos' || tab === 'import' || tab === 'reports' ? tab : 'dashboard';
   });
   const needsLegalAcceptance = Boolean(!loading && user && (!profile || profile.legalVersion !== CURRENT_LEGAL_VERSION));
+
+  useEffect(() => {
+    document.getElementById('app-fallback')?.remove();
+  }, []);
 
   useEffect(() => {
     // Wait for Firebase auth to resolve before starting analytics. If this
@@ -114,5 +148,5 @@ export const AppContent: React.FC = () => {
   </div>;
 };
 
-export function App() { return <AuthProvider><AppContent /></AuthProvider>; }
+export function App() { return <AppErrorBoundary><AuthProvider><AppContent /></AuthProvider></AppErrorBoundary>; }
 export default App;
