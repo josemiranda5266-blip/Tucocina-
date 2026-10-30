@@ -124,7 +124,22 @@ async function startServer() {
         }
       }
     }
-    app.use(express.static(distPath, { maxAge: '1d', index: false }));
+    app.use(express.static(distPath, {
+      maxAge: '1d',
+      index: false,
+      setHeaders: (res, filePath) => {
+        const extension = path.extname(filePath).toLowerCase();
+        if (extension === '.js' || extension === '.mjs') {
+          // Module scripts require a JavaScript MIME type. Set it explicitly
+          // and bypass stale intermediary/browser caches while diagnosing startup.
+          res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store');
+        } else if (extension === '.css') {
+          res.setHeader('Content-Type', 'text/css; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store');
+        }
+      },
+    }));
     app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }
 
