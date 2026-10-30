@@ -144,10 +144,10 @@ async function startServer() {
     // Never let the SPA fallback answer a missing asset request with index.html.
     // Browsers reject HTML returned as a JavaScript/CSS module (especially with nosniff),
     // and a 200 response can otherwise hide stale or incorrect asset references.
-    app.use((req, res, next) => {
+    app.use((req, res) => {
       const requestPath = req.path;
       const isAssetPath = requestPath === '/assets' || requestPath.startsWith('/assets/');
-      const isFileRequest = /\\.[a-z0-9]{1,10}$/i.test(requestPath);
+      const isFileRequest = /\.[a-z0-9]{1,10}$/i.test(requestPath);
       const isApiRequest = requestPath === '/api' || requestPath.startsWith('/api/');
 
       if (isAssetPath || isFileRequest || isApiRequest) {
