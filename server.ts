@@ -112,16 +112,17 @@ async function startServer() {
         html.matchAll(/(?:src|href)=["']([^"']+\.(?:js|css)(?:\?[^"']*)?)["']/g),
         (match) => match[1],
       );
-      console.log(\`[Frontend] index.html encontrado. Recursos locales detectados: \${assetUrls.length}.\`);
+      console.log('[Frontend] index.html encontrado. Recursos locales detectados: ' + assetUrls.length + '.');
       for (const assetUrl of assetUrls) {
         if (/^https?:\/\//i.test(assetUrl)) continue;
         const relativeAssetPath = assetUrl.split('?')[0].replace(/^\/+/, '');
         const assetPath = path.join(distPath, relativeAssetPath);
         if (fs.existsSync(assetPath)) {
-          console.log(\`[Frontend] Recurso disponible: \${relativeAssetPath} (\${fs.statSync(assetPath).size} bytes).\`);
+          console.log('[Frontend] Recurso disponible: ' + relativeAssetPath + ' (' + fs.statSync(assetPath).size + ' bytes).');
         } else {
-          console.error(\`[Frontend] FALTA recurso compilado: \${relativeAssetPath}.\`);
+          console.error('[Frontend] FALTA recurso compilado: ' + relativeAssetPath + '.');
         }
+      }
       }
     }
     app.use(express.static(distPath, { maxAge: '1d', index: false }));
