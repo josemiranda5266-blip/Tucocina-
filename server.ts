@@ -123,7 +123,6 @@ async function startServer() {
           console.error('[Frontend] FALTA recurso compilado: ' + relativeAssetPath + '.');
         }
       }
-      }
     }
     app.use(express.static(distPath, { maxAge: '1d', index: false }));
     app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
