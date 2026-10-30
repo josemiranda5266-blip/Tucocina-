@@ -16,7 +16,13 @@
     <title>CociFlash | Videos de cocina y recetas</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main id="app-fallback" role="status" aria-live="polite" style="max-width:640px;margin:12vh auto;padding:24px;font-family:system-ui,sans-serif;color:#292524;text-align:center">
+        <h1 style="font-size:1.6rem;margin-bottom:12px">CociFlash</h1>
+        <p style="line-height:1.6">Estamos iniciando la aplicación. Si este mensaje no desaparece, la interfaz no pudo cargarse correctamente.</p>
+        <p style="font-size:.9rem;color:#78716c">Volvé a intentar en unos instantes. Si el problema continúa, informanos para poder revisarlo.</p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
