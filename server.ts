@@ -124,6 +124,23 @@ async function startServer() {
         }
       }
     }
+    // Temporary diagnostics: record the actual response delivered for frontend assets.
+    // This distinguishes a missing request, an HTTP error, and an unexpected MIME/cache header.
+    app.use('/assets', (req, res, next) => {
+      res.on('finish', () => {
+        console.log('[Asset HTTP]', JSON.stringify({
+          method: req.method,
+          path: req.originalUrl,
+          status: res.statusCode,
+          contentType: res.getHeader('Content-Type') || null,
+          contentLength: res.getHeader('Content-Length') || null,
+          cacheControl: res.getHeader('Cache-Control') || null,
+          nosniff: res.getHeader('X-Content-Type-Options') || null,
+        }));
+      });
+      next();
+    });
+
     app.use(express.static(distPath, {
       maxAge: '1d',
       index: false,
