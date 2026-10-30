@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /favoritos
+Disallow: /buscar
+
+Sitemap: https://saborclick.com.ar/sitemap.xml
