@@ -130,8 +130,8 @@ async function startServer() {
       setHeaders: (res, filePath) => {
         const extension = path.extname(filePath).toLowerCase();
         if (extension === '.js' || extension === '.mjs') {
-          // Module scripts require a JavaScript MIME type. Set it explicitly
-          // and bypass stale intermediary/browser caches while diagnosing startup.
+          // Module scripts require a JavaScript MIME type. Disable caching
+          // temporarily so diagnostic deployments cannot reuse stale bundles.
           res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
           res.setHeader('Cache-Control', 'no-store');
         } else if (extension === '.css') {
@@ -140,7 +140,43 @@ async function startServer() {
         }
       },
     }));
-    app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
+
+    // Never let the SPA fallback answer a missing asset request with index.html.
+    // Browsers reject HTML returned as a JavaScript/CSS module (especially with nosniff),
+    // and a 200 response can otherwise hide stale or incorrect asset references.
+    app.use((req, res, next) => {
+      const requestPath = req.path;
+      const isAssetPath = requestPath === '/assets' || requestPath.startsWith('/assets/');
+      const isFileRequest = /\\.[a-z0-9]{1,10}$/i.test(requestPath);
+      const isApiRequest = requestPath === '/api' || requestPath.startsWith('/api/');
+
+      if (isAssetPath || isFileRequest || isApiRequest) {
+        console.warn('[Frontend] Recurso/ruta inexistente:', req.method, requestPath, 'Accept:', req.headers.accept || '(sin Accept)');
+        return res.status(404).json({
+          error: {
+            code: 'RESOURCE_NOT_FOUND',
+            message: 'El recurso solicitado no existe en esta versión de la aplicación.',
+            path: requestPath,
+          },
+        });
+      }
+
+      // Only real browser document navigations receive the SPA entry point.
+      // Module, fetch and API requests must never receive index.html as a fallback.
+      const acceptsHtml = (req.headers.accept || '').toLowerCase().includes('text/html');
+      if (req.method === 'GET' && acceptsHtml) {
+        res.setHeader('Cache-Control', 'no-store');
+        return res.sendFile(indexPath);
+      }
+
+      return res.status(404).json({
+        error: {
+          code: 'ROUTE_NOT_FOUND',
+          message: 'La ruta solicitada no existe.',
+          path: requestPath,
+        },
+      });
+    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
