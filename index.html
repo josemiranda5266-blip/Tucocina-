@@ -35,20 +35,57 @@
             extra.style.overflowWrap = 'anywhere';
           }
         };
+        var logDiagnostic = function (name, details) {
+          try { console.error('[SaborClick Diagnostics] ' + name, details); } catch (_) {}
+        };
+        console.info('[SaborClick Diagnostics] HTML de entrada ejecutado', {
+          url: location.href, readyState: document.readyState, userAgent: navigator.userAgent
+        });
         window.addEventListener('error', function (event) {
           var target = event.target;
-          if (target && target !== window) {
-            var resource = target.src || target.href || target.tagName || 'recurso desconocido';
+          var resourceError = !!(target && target !== window);
+          var details = {
+            eventType: event.type,
+            resourceError: resourceError,
+            targetTag: target && target.tagName || null,
+            targetSrc: target && target.src || null,
+            targetHref: target && target.href || null,
+            message: event.message || null,
+            filename: event.filename || null,
+            line: event.lineno || null,
+            column: event.colno || null,
+            stack: event.error && event.error.stack || null,
+            time: new Date().toISOString()
+          };
+          logDiagnostic('window.error', details);
+          if (resourceError) {
+            var resource = details.targetSrc || details.targetHref || details.targetTag || 'recurso desconocido';
             fallback('No se pudo cargar un recurso de la aplicación.', 'Recurso: ' + resource);
             return;
           }
-          var location = event.filename ? ' Archivo: ' + event.filename + (event.lineno ? ':' + event.lineno : '') : '';
-          fallback('Se produjo un error al iniciar la aplicación.', (event.message || 'Error JavaScript sin detalle') + location);
+          var locationDetail = event.filename
+            ? ' Archivo: ' + event.filename + (event.lineno ? ':' + event.lineno : '') + (event.colno ? ':' + event.colno : '')
+            : '';
+          fallback('Se produjo un error al iniciar la aplicación.', (event.message || 'Error JavaScript sin detalle') + locationDetail);
         }, true);
         window.addEventListener('unhandledrejection', function (event) {
           var reason = event.reason;
-          var detail = reason && reason.message ? reason.message : String(reason || 'Promesa rechazada sin detalle');
+          var detail = reason && reason.stack ? reason.stack :
+            reason && reason.message ? reason.message : String(reason || 'Promesa rechazada sin detalle');
+          logDiagnostic('unhandledrejection', { reason: detail, time: new Date().toISOString() });
           fallback('La aplicación falló durante su inicialización.', detail);
+        });
+        window.addEventListener('securitypolicyviolation', function (event) {
+          logDiagnostic('securitypolicyviolation', {
+            blockedURI: event.blockedURI, violatedDirective: event.violatedDirective,
+            effectiveDirective: event.effectiveDirective, sourceFile: event.sourceFile,
+            lineNumber: event.lineNumber, columnNumber: event.columnNumber,
+            disposition: event.disposition, originalPolicy: event.originalPolicy,
+            time: new Date().toISOString()
+          });
+        });
+        window.addEventListener('load', function () {
+          console.info('[SaborClick Diagnostics] window.load completado', new Date().toISOString());
         });
       })();
     </script>
