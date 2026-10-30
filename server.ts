@@ -24,6 +24,46 @@ const PORT = Number.parseInt(process.env.PORT || '3000', 10);
 const isProduction = process.env.NODE_ENV === 'production';
 
 app.set('trust proxy', true);
+
+// Temporary, privacy-conscious diagnostics for the document and its frontend assets.
+// Do not log cookies, authorization headers, query strings, or request bodies.
+app.use((req, res, next) => {
+  const requestPath = req.path;
+  const isFrontendRequest =
+    requestPath === '/' ||
+    requestPath === '/index.html' ||
+    requestPath.startsWith('/assets/');
+
+  if (isFrontendRequest) {
+    const requestDetails = {
+      method: req.method,
+      path: requestPath,
+      host: req.headers.host || null,
+      accept: req.headers.accept || null,
+      secFetchDest: req.headers['sec-fetch-dest'] || null,
+      secFetchMode: req.headers['sec-fetch-mode'] || null,
+      secFetchSite: req.headers['sec-fetch-site'] || null,
+      acceptEncoding: req.headers['accept-encoding'] || null,
+      userAgent: req.headers['user-agent'] || null,
+    };
+    console.log('[Frontend Request]', JSON.stringify(requestDetails));
+
+    res.on('finish', () => {
+      console.log('[Frontend Response]', JSON.stringify({
+        method: req.method,
+        path: requestPath,
+        status: res.statusCode,
+        contentType: res.getHeader('Content-Type') || null,
+        contentLength: res.getHeader('Content-Length') || null,
+        contentEncoding: res.getHeader('Content-Encoding') || null,
+        cacheControl: res.getHeader('Cache-Control') || null,
+      }));
+    });
+  }
+
+  next();
+});
+
 app.use(express.json({ limit: '1mb' }));
 
 app.use((_req, res, next) => {
