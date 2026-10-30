@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 
@@ -102,8 +103,97 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath, { maxAge: '1d', index: false }));
-    app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
+    const indexPath = path.join(distPath, 'index.html');
+    if (!fs.existsSync(indexPath)) {
+      console.error('[Frontend] No se encontró dist/index.html; la compilación del frontend no generó el documento de entrada.');
+    } else {
+      const html = fs.readFileSync(indexPath, 'utf8');
+      const assetUrls = Array.from(
+        html.matchAll(/(?:src|href)=["']([^"']+\.(?:js|css)(?:\?[^"']*)?)["']/g),
+        (match) => match[1],
+      );
+      console.log('[Frontend] index.html encontrado. Recursos locales detectados: ' + assetUrls.length + '.');
+      for (const assetUrl of assetUrls) {
+        if (/^https?:\/\//i.test(assetUrl)) continue;
+        const relativeAssetPath = assetUrl.split('?')[0].replace(/^\/+/, '');
+        const assetPath = path.join(distPath, relativeAssetPath);
+        if (fs.existsSync(assetPath)) {
+          console.log('[Frontend] Recurso disponible: ' + relativeAssetPath + ' (' + fs.statSync(assetPath).size + ' bytes).');
+        } else {
+          console.error('[Frontend] FALTA recurso compilado: ' + relativeAssetPath + '.');
+        }
+      }
+    }
+    // Temporary diagnostics: record the actual response delivered for frontend assets.
+    // This distinguishes a missing request, an HTTP error, and an unexpected MIME/cache header.
+    app.use('/assets', (req, res, next) => {
+      res.on('finish', () => {
+        console.log('[Asset HTTP]', JSON.stringify({
+          method: req.method,
+          path: req.originalUrl,
+          status: res.statusCode,
+          contentType: res.getHeader('Content-Type') || null,
+          contentLength: res.getHeader('Content-Length') || null,
+          cacheControl: res.getHeader('Cache-Control') || null,
+          nosniff: res.getHeader('X-Content-Type-Options') || null,
+        }));
+      });
+      next();
+    });
+
+    app.use(express.static(distPath, {
+      maxAge: '1d',
+      index: false,
+      setHeaders: (res, filePath) => {
+        const extension = path.extname(filePath).toLowerCase();
+        if (extension === '.js' || extension === '.mjs') {
+          // Module scripts require a JavaScript MIME type. Disable caching
+          // temporarily so diagnostic deployments cannot reuse stale bundles.
+          res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store');
+        } else if (extension === '.css') {
+          res.setHeader('Content-Type', 'text/css; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store');
+        }
+      },
+    }));
+
+    // Never let the SPA fallback answer a missing asset request with index.html.
+    // Browsers reject HTML returned as a JavaScript/CSS module (especially with nosniff),
+    // and a 200 response can otherwise hide stale or incorrect asset references.
+    app.use((req, res) => {
+      const requestPath = req.path;
+      const isAssetPath = requestPath === '/assets' || requestPath.startsWith('/assets/');
+      const isFileRequest = /\.[a-z0-9]{1,10}$/i.test(requestPath);
+      const isApiRequest = requestPath === '/api' || requestPath.startsWith('/api/');
+
+      if (isAssetPath || isFileRequest || isApiRequest) {
+        console.warn('[Frontend] Recurso/ruta inexistente:', req.method, requestPath, 'Accept:', req.headers.accept || '(sin Accept)');
+        return res.status(404).json({
+          error: {
+            code: 'RESOURCE_NOT_FOUND',
+            message: 'El recurso solicitado no existe en esta versión de la aplicación.',
+            path: requestPath,
+          },
+        });
+      }
+
+      // Only real browser document navigations receive the SPA entry point.
+      // Module, fetch and API requests must never receive index.html as a fallback.
+      const acceptsHtml = (req.headers.accept || '').toLowerCase().includes('text/html');
+      if (req.method === 'GET' && acceptsHtml) {
+        res.setHeader('Cache-Control', 'no-store');
+        return res.sendFile(indexPath);
+      }
+
+      return res.status(404).json({
+        error: {
+          code: 'ROUTE_NOT_FOUND',
+          message: 'La ruta solicitada no existe.',
+          path: requestPath,
+        },
+      });
+    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
