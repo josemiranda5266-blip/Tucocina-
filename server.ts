@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 
@@ -102,6 +103,27 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
+    const indexPath = path.join(distPath, 'index.html');
+    if (!fs.existsSync(indexPath)) {
+      console.error('[Frontend] No se encontró dist/index.html; la compilación del frontend no generó el documento de entrada.');
+    } else {
+      const html = fs.readFileSync(indexPath, 'utf8');
+      const assetUrls = Array.from(
+        html.matchAll(/(?:src|href)=["']([^"']+\\.(?:js|css)(?:\\?[^"']*)?)["']/g),
+        (match) => match[1],
+      );
+      console.log(`[Frontend] index.html encontrado. Recursos locales detectados: ${assetUrls.length}.`);
+      for (const assetUrl of assetUrls) {
+        if (/^https?:\\/\\//i.test(assetUrl)) continue;
+        const relativeAssetPath = assetUrl.split('?')[0].replace(/^\\/+/, '');
+        const assetPath = path.join(distPath, relativeAssetPath);
+        if (fs.existsSync(assetPath)) {
+          console.log(`[Frontend] Recurso disponible: ${relativeAssetPath} (${fs.statSync(assetPath).size} bytes).`);
+        } else {
+          console.error(`[Frontend] FALTA recurso compilado: ${relativeAssetPath}.`);
+        }
+      }
+    }
     app.use(express.static(distPath, { maxAge: '1d', index: false }));
     app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }
