@@ -25,6 +25,38 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 app.set('trust proxy', true);
 
+// Temporary frontend diagnostics. Deliberately omit cookies, authorization,
+// query strings and request bodies; log only document/asset transport metadata.
+app.use((req, res, next) => {
+  const requestPath = req.path;
+  const isFrontendRequest = requestPath === '/' || requestPath === '/index.html' || requestPath.startsWith('/assets/');
+  if (isFrontendRequest) {
+    console.log('[Frontend Request]', JSON.stringify({
+      method: req.method,
+      path: requestPath,
+      host: req.headers.host || null,
+      accept: req.headers.accept || null,
+      secFetchDest: req.headers['sec-fetch-dest'] || null,
+      secFetchMode: req.headers['sec-fetch-mode'] || null,
+      secFetchSite: req.headers['sec-fetch-site'] || null,
+      acceptEncoding: req.headers['accept-encoding'] || null,
+      userAgent: req.headers['user-agent'] || null,
+    }));
+    res.on('finish', () => {
+      console.log('[Frontend Response]', JSON.stringify({
+        method: req.method,
+        path: requestPath,
+        status: res.statusCode,
+        contentType: res.getHeader('Content-Type') || null,
+        contentLength: res.getHeader('Content-Length') || null,
+        contentEncoding: res.getHeader('Content-Encoding') || null,
+        cacheControl: res.getHeader('Cache-Control') || null,
+      }));
+    });
+  }
+  next();
+});
+
 // Temporary, privacy-conscious diagnostics for the document and its frontend assets.
 // Do not log cookies, authorization headers, query strings, or request bodies.
 app.use((req, res, next) => {
