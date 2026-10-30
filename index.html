@@ -19,10 +19,39 @@
     <div id="root">
       <main id="app-fallback" role="status" aria-live="polite" style="max-width:640px;margin:12vh auto;padding:24px;font-family:system-ui,sans-serif;color:#292524;text-align:center">
         <h1 style="font-size:1.6rem;margin-bottom:12px">CociFlash</h1>
-        <p style="line-height:1.6">Estamos iniciando la aplicación. Si este mensaje no desaparece, la interfaz no pudo cargarse correctamente.</p>
-        <p style="font-size:.9rem;color:#78716c">Volvé a intentar en unos instantes. Si el problema continúa, informanos para poder revisarlo.</p>
+        <p id="app-fallback-message" style="line-height:1.6">Estamos iniciando la aplicación. Si este mensaje no desaparece, la interfaz no pudo cargarse correctamente.</p>
+        <p id="app-fallback-detail" style="font-size:.9rem;color:#78716c">Volvé a intentar en unos instantes. Si el problema continúa, informanos para poder revisarlo.</p>
       </main>
     </div>
+    <script>
+      (function () {
+        var fallback = function (title, detail) {
+          var message = document.getElementById('app-fallback-message');
+          var extra = document.getElementById('app-fallback-detail');
+          if (message) message.textContent = title;
+          if (extra) {
+            extra.textContent = detail;
+            extra.style.whiteSpace = 'pre-wrap';
+            extra.style.overflowWrap = 'anywhere';
+          }
+        };
+        window.addEventListener('error', function (event) {
+          var target = event.target;
+          if (target && target !== window) {
+            var resource = target.src || target.href || target.tagName || 'recurso desconocido';
+            fallback('No se pudo cargar un recurso de la aplicación.', 'Recurso: ' + resource);
+            return;
+          }
+          var location = event.filename ? ' Archivo: ' + event.filename + (event.lineno ? ':' + event.lineno : '') : '';
+          fallback('Se produjo un error al iniciar la aplicación.', (event.message || 'Error JavaScript sin detalle') + location);
+        }, true);
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason;
+          var detail = reason && reason.message ? reason.message : String(reason || 'Promesa rechazada sin detalle');
+          fallback('La aplicación falló durante su inicialización.', detail);
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
