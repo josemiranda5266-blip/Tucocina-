@@ -1,5 +1,6 @@
 import React from 'react';
 import { AdConfig, AdProviderType, AdSlotProps } from './adTypes';
+import { AdsterraSlot } from '../../components/ads/AdsterraSlot';
 
 export interface IAdProvider {
   readonly name: string;
@@ -8,80 +9,42 @@ export interface IAdProvider {
   destroy?(): void;
 }
 
-/**
- * Inert provider returned when advertising is disabled or set to 'none'.
- * Guaranteed to return null and perform zero side effects or network requests.
- */
 export class NullAdProvider implements IAdProvider {
   readonly name = 'none';
-
-  async init(_config: AdConfig): Promise<void> {
-    // No-op: zero scripts, zero network calls
-  }
-
-  renderSlot(_props: AdSlotProps, _config: AdConfig): React.ReactNode {
-    return null;
-  }
+  async init(_config: AdConfig): Promise<void> {}
+  renderSlot(_props: AdSlotProps, _config: AdConfig): React.ReactNode { return null; }
 }
 
-/**
- * Future AdSense provider stub.
- * Unimplemented until an official AdSense account is created, approved, and configured.
- */
 export class AdsenseProvider implements IAdProvider {
   readonly name = 'adsense';
-
   async init(config: AdConfig): Promise<void> {
-    if (!config.publisherId) {
-      console.warn('[AdProvider] AdSense initialization skipped: missing publisher ID.');
-      return;
-    }
-    // Future AdSense script injection logic will be implemented here when approved.
+    if (!config.publisherId) console.warn('[AdProvider] AdSense initialization skipped: missing publisher ID.');
   }
-
-  renderSlot(props: AdSlotProps, config: AdConfig): React.ReactNode {
-    if (!config.enabled || !config.publisherId) {
-      return null;
-    }
-
-    const slotConfig = config.placements[props.placement];
-    if (!slotConfig || !slotConfig.enabled) {
-      return null;
-    }
-
-    // Future AdSense <ins className="adsbygoogle" ...> component
-    return null;
-  }
+  renderSlot(_props: AdSlotProps, _config: AdConfig): React.ReactNode { return null; }
 }
 
-/**
- * Future Direct Sponsor provider stub.
- * Unimplemented until direct commercial sponsorship deals are signed.
- */
 export class DirectSponsorProvider implements IAdProvider {
   readonly name = 'direct_sponsor';
+  async init(_config: AdConfig): Promise<void> {}
+  renderSlot(_props: AdSlotProps, _config: AdConfig): React.ReactNode { return null; }
+}
 
-  async init(_config: AdConfig): Promise<void> {
-    // Future direct sponsorship asset preloading
-  }
-
+export class AdsterraProvider implements IAdProvider {
+  readonly name = 'adsterra';
+  async init(_config: AdConfig): Promise<void> {}
   renderSlot(props: AdSlotProps, config: AdConfig): React.ReactNode {
-    // Future custom sponsor banner rendering
-    return null;
+    if (!config.enabled || !config.placements[props.placement]?.enabled) return null;
+    if (props.placement !== 'HOME_TOP' && props.placement !== 'HOME_MIDDLE') return null;
+    return <AdsterraSlot {...props} />;
   }
 }
 
-/**
- * Factory to retrieve the active AdProvider instance.
- */
 export function getAdProvider(type: AdProviderType): IAdProvider {
   switch (type) {
-    case 'adsense':
-      return new AdsenseProvider();
-    case 'direct_sponsor':
-      return new DirectSponsorProvider();
+    case 'adsense': return new AdsenseProvider();
+    case 'direct_sponsor': return new DirectSponsorProvider();
+    case 'adsterra': return new AdsterraProvider();
     case 'none':
-    default:
-      return new NullAdProvider();
+    default: return new NullAdProvider();
   }
 }
