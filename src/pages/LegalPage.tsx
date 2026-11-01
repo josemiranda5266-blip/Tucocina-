@@ -16,7 +16,7 @@ const sections: Array<{ id: LegalSection; label: string; icon: React.ReactNode }
 ];
 
 const effectiveDate = '1 de noviembre de 2026';
-const contactEmail = 'contacto@cociflash.com';
+const contactEmail = 'josemiranda5266@gmail.com';
 
 export const LegalPage: React.FC<LegalPageProps> = ({ section, onNavigate }) => (
   <div className="max-w-5xl mx-auto">
