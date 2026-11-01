@@ -47,3 +47,26 @@ test('6. Adsterra placements remain independently disabled by default', () => {
   assert.equal(config.placements.HOME_MIDDLE.enabled, false);
   assert.equal(config.placements.VIDEO_BEFORE.enabled, false);
 });
+
+test('7. Adsterra provider returns a React slot only for enabled home placements', () => {
+  const provider = new AdsterraProvider();
+  const config = {
+    enabled: true,
+    provider: 'adsterra' as const,
+    placements: {
+      HOME_TOP: { enabled: true, format: 'rectangle' as const },
+      HOME_MIDDLE: { enabled: false, format: 'native' as const },
+      SEARCH_MIDDLE: { enabled: false },
+      CATEGORY_TOP: { enabled: false },
+      CATEGORY_MIDDLE: { enabled: false },
+      VIDEO_BEFORE: { enabled: false },
+      VIDEO_AFTER: { enabled: false },
+      VIDEO_MIDDLE: { enabled: false },
+    },
+  };
+  const rendered = provider.renderSlot({ placement: 'HOME_TOP' }, config);
+  assert.ok(rendered);
+  assert.equal((rendered as { type?: { name?: string } }).type?.name, 'AdsterraSlot');
+  assert.equal(provider.renderSlot({ placement: 'HOME_MIDDLE' }, config), null);
+  assert.equal(provider.renderSlot({ placement: 'VIDEO_BEFORE' }, config), null);
+});
