@@ -2,6 +2,7 @@ import React from 'react';
 import { AdSlotProps } from '../../services/ads/adTypes';
 import { getAdConfig, isAdsEnabled, isPlacementEnabled } from '../../services/ads/adConfig';
 import { getAdProvider } from '../../services/ads/AdProvider';
+import { useAdConsent } from '../../context/AdConsentContext';
 
 /**
  * Reusable AdSlot Component for future monetization.
@@ -12,6 +13,11 @@ import { getAdProvider } from '../../services/ads/AdProvider';
  * and causes zero layout shifts.
  */
 export const AdSlot: React.FC<AdSlotProps> = (props) => {
+  const { choice } = useAdConsent();
+
+  // Adsterra scripts are strictly blocked until an explicit, current acceptance.
+  if (getAdConfig().provider === 'adsterra' && choice !== 'accepted') return null;
+
   // Fast exit: if global ads are disabled, render nothing
   if (!isAdsEnabled()) {
     return null;
