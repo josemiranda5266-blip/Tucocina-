@@ -3,6 +3,8 @@ import { AdSlotProps } from '../../services/ads/adTypes';
 
 const NATIVE_SCRIPT_URL = 'https://bancadeltempoidea.org/21/295a4cea70299fca7890e4ac7af65489';
 const RECTANGLE_SCRIPT_URL = 'https://bancadeltempoidea.org/22/e1ab3355ac39411bfd3f2c4dee527a05';
+const RECTANGLE_WIDTH = 300;
+const RECTANGLE_HEIGHT = 250;
 
 declare global {
   interface Window {
@@ -18,8 +20,8 @@ declare global {
 
 /**
  * Loads the publisher snippets in their documented order.
- * The 300x250 unit uses the classic atOptions + external-script sequence;
- * it is deliberately not marked async.
+ * The 300x250 unit is scaled proportionally only when the available
+ * mobile width is narrower than the fixed creative.
  */
 export const AdsterraSlot: React.FC<AdSlotProps> = ({ placement, className }) => {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -32,8 +34,44 @@ export const AdsterraSlot: React.FC<AdSlotProps> = ({ placement, className }) =>
     const rectangle = placement === 'HOME_TOP';
     const scriptId = rectangle ? 'adsterra-300x250-script' : 'adsterra-native-script';
 
+    let resizeObserver: ResizeObserver | undefined;
+    let mutationObserver: MutationObserver | undefined;
+
+    const fitRectangleToAvailableWidth = () => {
+      if (!rectangle) return;
+
+      const availableWidth = host.clientWidth;
+      const scale = Math.min(1, availableWidth / RECTANGLE_WIDTH);
+      const scaledHeight = RECTANGLE_HEIGHT * scale;
+
+      host.style.minHeight = `${scaledHeight}px`;
+
+      host.querySelectorAll('iframe').forEach((frame) => {
+        frame.style.width = `${RECTANGLE_WIDTH}px`;
+        frame.style.height = `${RECTANGLE_HEIGHT}px`;
+        frame.style.maxWidth = 'none';
+        frame.style.display = 'block';
+        frame.style.transform = `scale(${scale})`;
+        frame.style.transformOrigin = 'top center';
+        frame.style.marginBottom = `${scaledHeight - RECTANGLE_HEIGHT}px`;
+      });
+    };
+
+    if (rectangle) {
+      resizeObserver = new ResizeObserver(fitRectangleToAvailableWidth);
+      resizeObserver.observe(host);
+      mutationObserver = new MutationObserver(fitRectangleToAvailableWidth);
+      mutationObserver.observe(host, { childList: true, subtree: true });
+    }
+
     // Avoid injecting the same publisher unit twice if the component is remounted.
-    if (document.getElementById(scriptId)) return;
+    if (document.getElementById(scriptId)) {
+      fitRectangleToAvailableWidth();
+      return () => {
+        resizeObserver?.disconnect();
+        mutationObserver?.disconnect();
+      };
+    }
 
     const script = document.createElement('script');
     script.id = scriptId;
@@ -44,8 +82,8 @@ export const AdsterraSlot: React.FC<AdSlotProps> = ({ placement, className }) =>
       window.atOptions = {
         key: 'e1ab3355ac39411bfd3f2c4dee527a05',
         format: 'iframe',
-        height: 250,
-        width: 300,
+        height: RECTANGLE_HEIGHT,
+        width: RECTANGLE_WIDTH,
         params: {},
       };
 
@@ -62,6 +100,8 @@ export const AdsterraSlot: React.FC<AdSlotProps> = ({ placement, className }) =>
     }
 
     return () => {
+      resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
       script.remove();
       if (rectangle) delete window.atOptions;
     };
@@ -69,9 +109,11 @@ export const AdsterraSlot: React.FC<AdSlotProps> = ({ placement, className }) =>
 
   if (placement === 'HOME_TOP') {
     return (
-      <div ref={hostRef} className={className || 'my-5 flex justify-center'} aria-label="Publicidad">
-        <div className="min-h-[250px] min-w-[300px]" />
-      </div>
+      <div
+        ref={hostRef}
+        className={className || 'my-5 flex min-h-[250px] w-full items-center justify-center'}
+        aria-label="Publicidad"
+      />
     );
   }
 
