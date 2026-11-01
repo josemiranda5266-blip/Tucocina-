@@ -19,17 +19,15 @@ export function getAdConfig(): AdConfig {
   const metaEnv = typeof import.meta !== 'undefined' ? import.meta.env : undefined;
   const procEnv = typeof process !== 'undefined' ? process.env : undefined;
 
-  const read = (key: string): string | undefined =>
-    (metaEnv?.[key] ?? procEnv?.[key]) as string | undefined;
-
-  const envEnabled = read('VITE_ADS_ENABLED') === 'true';
-  const rawProvider = read('VITE_ADS_PROVIDER') || 'none';
+  // Keep Vite environment references static so Vite can replace them at build time.
+  const envEnabled = (metaEnv?.VITE_ADS_ENABLED ?? procEnv?.VITE_ADS_ENABLED) === 'true';
+  const rawProvider = (metaEnv?.VITE_ADS_PROVIDER ?? procEnv?.VITE_ADS_PROVIDER ?? 'none') as string;
   const validProvider = (['none', 'adsense', 'direct_sponsor', 'adsterra'].includes(rawProvider)
     ? rawProvider
     : 'none') as AdConfig['provider'];
 
-  const nativeEnabled = read('VITE_ADSTERRA_NATIVE_ENABLED') === 'true';
-  const rectangleEnabled = read('VITE_ADSTERRA_300X250_ENABLED') === 'true';
+  const nativeEnabled = (metaEnv?.VITE_ADSTERRA_NATIVE_ENABLED ?? procEnv?.VITE_ADSTERRA_NATIVE_ENABLED) === 'true';
+  const rectangleEnabled = (metaEnv?.VITE_ADSTERRA_300X250_ENABLED ?? procEnv?.VITE_ADSTERRA_300X250_ENABLED) === 'true';
 
   const placements: Record<AdPlacement, AdPlacementConfig> = {
     ...defaultPlacementsConfig,
@@ -37,7 +35,7 @@ export function getAdConfig(): AdConfig {
     HOME_MIDDLE: { enabled: nativeEnabled, format: 'native' },
   };
 
-  const publisherId = read('VITE_ADSENSE_PUBLISHER_ID') || '';
+  const publisherId = (metaEnv?.VITE_ADSENSE_PUBLISHER_ID ?? procEnv?.VITE_ADSENSE_PUBLISHER_ID ?? '') as string;
   const providerConfigured =
     validProvider === 'adsense'
       ? Boolean(publisherId.trim())
