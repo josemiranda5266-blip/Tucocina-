@@ -19,6 +19,8 @@ import { AdminReports } from './pages/admin/AdminReports';
 import { QuickVideoManager } from './components/admin/QuickVideoManager';
 import { Video } from './types';
 import { track, trackPageView, trackSessionStart } from './services/analytics';
+import { AdConsentProvider, useAdConsent } from './context/AdConsentContext';
+import { AdConsentBanner } from './components/AdConsentBanner';
 
 type AppLocation = { view: string; param: string };
 function safeDecode(value: string): string { try { return decodeURIComponent(value); } catch { return ''; } }
@@ -55,6 +57,7 @@ function writeLocation(view: string, param = '') {
 
 export const AppContent: React.FC = () => {
   const { user, profile, loading, isAdmin, authError, clearAuthError } = useAuth();
+  const { openSettings } = useAdConsent();
   const [location, setLocation] = useState<AppLocation>(() => readLocation());
   const [adminTab, setAdminTab] = useState<'dashboard' | 'videos' | 'import' | 'reports'>(() => {
     const tab = new URLSearchParams(window.location.search).get('tab');
@@ -109,10 +112,11 @@ export const AppContent: React.FC = () => {
     <Header currentView={location.view} onNavigate={handleNavigate} />
     {authError && <div className="bg-red-50 border-b border-red-200 px-4 py-3 text-red-800 text-sm flex items-center justify-between max-w-7xl mx-auto w-full mt-2 rounded-lg shadow-sm"><div className="flex items-center space-x-2"><AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" /><div><strong className="font-semibold">Error de Autenticación:</strong> {authError}</div></div><button type="button" onClick={clearAuthError} className="p-1 text-red-600 hover:text-red-900 rounded-md hover:bg-red-100 transition-colors" title="Cerrar mensaje"><X className="w-4 h-4" /></button></div>}
     <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">{renderView()}</main>
-    <Footer onNavigate={handleNavigate} />
+    <Footer onNavigate={handleNavigate} onManageAdConsent={openSettings} />
+    <AdConsentBanner onNavigate={handleNavigate} />
     {needsLegalAcceptance && <LegalConsentModal onNavigate={handleNavigate} />}
   </div>;
 };
 
-export function App() { return <AuthProvider><AppContent /></AuthProvider>; }
+export function App() { return <AdConsentProvider><AuthProvider><AppContent /></AuthProvider></AdConsentProvider>; }
 export default App;
