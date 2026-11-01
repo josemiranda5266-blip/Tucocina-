@@ -8,6 +8,7 @@ test('1. Default ad configuration is strictly disabled', () => {
   const config = getAdConfig();
   assert.equal(config.enabled, false);
   assert.equal(config.provider, 'none');
+  assert.equal(config.publisherId, undefined);
   assert.equal(isAdsEnabled(), false);
 });
 
