@@ -16,7 +16,7 @@ const sections: Array<{ id: LegalSection; label: string; icon: React.ReactNode }
 ];
 
 const effectiveDate = '1 de noviembre de 2026';
-const contactEmail = 'contacto@saborclick.com';
+const contactEmail = 'contacto@cociflash.com';
 
 export const LegalPage: React.FC<LegalPageProps> = ({ section, onNavigate }) => (
   <div className="max-w-5xl mx-auto">
@@ -68,7 +68,7 @@ const PrivacyContent = () => (
     <p>Información del proveedor: <a href="https://adsterra.com/privacy-policy-managed" target="_blank" rel="noopener noreferrer">Política de privacidad de Adsterra</a> y <a href="https://adsterra.com/cookies/" target="_blank" rel="noopener noreferrer">Política de cookies de Adsterra</a>. Estas políticas pueden cambiar y recomendamos consultarlas directamente.</p>
     <p>SaborClick no vende por cuenta propia los datos personales de sus usuarios. La transmisión técnica de información a proveedores para prestar servicios publicitarios no debe interpretarse como una venta de datos.</p>
 
-    <h2>5. Conservación, eliminación y seguridad</h2>
+    <h2>6. Conservación, eliminación y seguridad</h2>
     <p>Conservamos la información durante el tiempo necesario para prestar el servicio, mantener registros operativos, atender reportes y cumplir obligaciones legales. La cuenta dispone de una opción para solicitar la eliminación de la cuenta y de los datos de primera parte asociados, incluyendo perfil, favoritos, reportes y comentarios asociados. Los eventos de analítica agregados no están vinculados directamente con la identidad de la cuenta y pueden conservarse como estadísticas anónimas.</p>
     <p>Aplicamos controles de autenticación, autorización y medidas técnicas razonables para proteger la información. Ningún sistema conectado a Internet puede garantizar seguridad absoluta.</p>
 
@@ -93,12 +93,13 @@ const TermsContent = () => (
     <h2>3. Aceptación</h2><p>Para utilizar una cuenta se solicita una aceptación expresa de estos Términos de Uso y de la Política de Privacidad. SaborClick registra la versión legal y la fecha/hora de esa aceptación para mantener constancia de la versión aceptada.</p>
     <h2>4. Uso aceptable</h2><p>No está permitido utilizar SaborClick para actividades ilícitas, fraude, abuso, extracción automatizada que perjudique el servicio, evasión de medidas de seguridad, distribución de malware o envío deliberado de información falsa o abusiva.</p>
     <h2>5. Disponibilidad</h2><p>SaborClick se proporciona en función de la disponibilidad de su infraestructura y de las plataformas externas. No garantizamos disponibilidad permanente ni que todos los videos externos permanezcan publicados, sean reproducibles o estén disponibles en todos los países.</p>
-    <h2>6. Contenido de terceros</h2><p>Los videos, imágenes, nombres, marcas y demás contenidos de terceros pertenecen a sus respectivos titulares. SaborClick no afirma ser propietario de esos contenidos ni representa a sus autores o plataformas de origen.</p>
-    <h2>7. Reportes y moderación</h2><p>SaborClick puede revisar y retirar de su catálogo referencias que infrinjan estos términos, derechos de terceros, normas de las plataformas de origen o la legislación aplicable. Un reporte no implica que el contenido sea ilícito ni garantiza su retiro inmediato.</p>
-    <h2>8. Propiedad de SaborClick</h2><p>El software, diseño, textos originales, estructura del catálogo y elementos propios de SaborClick pertenecen a sus respectivos titulares y no pueden copiarse o explotarse fuera de los usos permitidos por la legislación aplicable.</p>
-    <h2>9. Eliminación de cuenta</h2><p>La persona usuaria puede solicitar la eliminación de su cuenta desde la propia aplicación. La eliminación afecta los datos de primera parte asociados que SaborClick pueda eliminar técnicamente, sin perjuicio de registros que deban conservarse por obligación legal o de estadísticas agregadas que no permitan identificar directamente a la persona.</p>
-    <h2>10. Modificaciones</h2><p>Podemos actualizar estos términos cuando cambien las funciones, proveedores o requisitos legales. Cuando una modificación requiera un consentimiento específico, se solicitará de forma correspondiente.</p>
-    <h2>11. Legislación</h2><p>Estos términos se interpretarán conforme a la legislación argentina aplicable, sin perjuicio de los derechos irrenunciables que correspondan a las personas usuarias conforme a la normativa vigente.</p>
+    <h2>6. Publicidad</h2><p>El sitio puede mostrar publicidad de terceros, incluida publicidad servida por Adsterra. Los anuncios pueden utilizar recursos y tecnologías de terceros para su entrega, medición, limitación de frecuencia y prevención de fraude. Los proveedores y anunciantes correspondientes son responsables de sus propios contenidos, destinos y tratamientos de datos. SaborClick no garantiza ni necesariamente respalda los productos, servicios o afirmaciones anunciados. Informamos sobre el tratamiento publicitario en las Políticas de Privacidad y de Cookies.</p>
+    <h2>7. Contenido de terceros</h2><p>Los videos, imágenes, nombres, marcas y demás contenidos de terceros pertenecen a sus respectivos titulares. SaborClick no afirma ser propietario de esos contenidos ni representa a sus autores o plataformas de origen.</p>
+    <h2>8. Reportes y moderación</h2><p>SaborClick puede revisar y retirar de su catálogo referencias que infrinjan estos términos, derechos de terceros, normas de las plataformas de origen o la legislación aplicable. Un reporte no implica que el contenido sea ilícito ni garantiza su retiro inmediato.</p>
+    <h2>9. Propiedad de SaborClick</h2><p>El software, diseño, textos originales, estructura del catálogo y elementos propios de SaborClick pertenecen a sus respectivos titulares y no pueden copiarse o explotarse fuera de los usos permitidos por la legislación aplicable.</p>
+    <h2>10. Eliminación de cuenta</h2><p>La persona usuaria puede solicitar la eliminación de su cuenta desde la propia aplicación. La eliminación afecta los datos de primera parte asociados que SaborClick pueda eliminar técnicamente, sin perjuicio de registros que deban conservarse por obligación legal o de estadísticas agregadas que no permitan identificar directamente a la persona.</p>
+    <h2>11. Modificaciones</h2><p>Podemos actualizar estos términos cuando cambien las funciones, proveedores o requisitos legales. Cuando una modificación requiera un consentimiento específico, se solicitará de forma correspondiente.</p>
+    <h2>12. Legislación</h2><p>Estos términos se interpretarán conforme a la legislación argentina aplicable, sin perjuicio de los derechos irrenunciables que correspondan a las personas usuarias conforme a la normativa vigente.</p>
   </>
 );
 
