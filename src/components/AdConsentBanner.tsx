@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cookie, ShieldCheck, X } from 'lucide-react';
+import { Cookie, ShieldCheck } from 'lucide-react';
 import { getAdConfig } from '../services/ads/adConfig';
 import { useAdConsent } from '../context/AdConsentContext';
 
