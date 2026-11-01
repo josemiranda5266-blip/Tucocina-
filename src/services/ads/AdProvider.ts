@@ -35,7 +35,7 @@ export class AdsterraProvider implements IAdProvider {
   renderSlot(props: AdSlotProps, config: AdConfig): React.ReactNode {
     if (!config.enabled || !config.placements[props.placement]?.enabled) return null;
     if (props.placement !== 'HOME_TOP' && props.placement !== 'HOME_MIDDLE') return null;
-    return <AdsterraSlot {...props} />;
+    return React.createElement(AdsterraSlot, props);
   }
 }
 
