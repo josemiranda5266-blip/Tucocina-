@@ -48,6 +48,7 @@ export const AdsterraSlot: React.FC<AdSlotProps> = ({ placement, className }) =>
 
     return () => {
       script.remove();
+      host.replaceChildren();
       if (rectangle) delete window.atOptions;
     };
   }, [placement]);
