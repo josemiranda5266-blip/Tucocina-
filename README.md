@@ -1,9 +1,9 @@
-# CociFlash 📚
+# SaborClick 📚
 
-CociFlash es una plataforma web para **descubrir, buscar y guardar videos de aprendizaje práctico**: cocina, pastelería, oficios técnicos, trabajos manuales, tecnología y habilidades laborales. Los videos se alojan en plataformas externas como YouTube, Instagram y TikTok.
+SaborClick es una plataforma web para **descubrir, buscar y guardar videos de aprendizaje práctico**: cocina, pastelería, oficios técnicos, trabajos manuales, tecnología y habilidades laborales. Los videos se alojan en plataformas externas como YouTube, Instagram y TikTok.
 
 ## 📌 Concepto del Producto
-CociFlash es un catálogo y buscador audiovisual, no un chatbot. Su objetivo es facilitar el acceso a tutoriales y demostraciones prácticas, respetando a los creadores y las plataformas originales. Los videos pertenecen a sus respectivos creadores y plataformas originales, siendo reproducidos mediante incrustación oficial (embed).
+SaborClick es un catálogo y buscador audiovisual, no un chatbot. Su objetivo es facilitar el acceso a tutoriales y demostraciones prácticas, respetando a los creadores y las plataformas originales. Los videos pertenecen a sus respectivos creadores y plataformas originales, siendo reproducidos mediante incrustación oficial (embed).
 
 ## 🛠️ Stack Tecnológico
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons, Motion.

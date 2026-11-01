@@ -18,7 +18,8 @@ export const AiVideoImportAssistant: React.FC<{ onImportSuccess?: () => void }> 
   const update = (index: number, patch: Partial<Suggestion>) => setItems((old) => old.map((item, i) => i === index ? { ...item, ...patch } : item));
 
   async function suggest() {
-    const list = [...new Set(urls.split(/\r?\n/).map((u) => u.trim()).filter(Boolean))];
+    const normalizedUrls: string[] = urls.split(/\r?\n/).map((url: string) => url.trim()).filter((url: string) => url.length > 0);
+    const list: string[] = Array.from(new Set<string>(normalizedUrls));
     if (!list.length || list.length > 10) { setError('Pegá entre 1 y 10 enlaces, uno por línea.'); return; }
     setBusy(true); setError(''); setMessage(''); setItems([]);
     try {

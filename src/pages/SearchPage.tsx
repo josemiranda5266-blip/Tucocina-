@@ -120,7 +120,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ initialQuery = '', onVid
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="space-y-2"><h1 className="text-3xl font-extrabold font-serif text-stone-900">Buscador de CociFlash</h1><p className="text-stone-600 text-sm">Encontrá recetas y videos de cocina por nombre, tema, creador o etiquetas.</p>
+      <div className="space-y-2"><h1 className="text-3xl font-extrabold font-serif text-stone-900">Buscador de SaborClick</h1><p className="text-stone-600 text-sm">Encontrá recetas y videos de cocina por nombre, tema, creador o etiquetas.</p>
         <div className="inline-flex flex-wrap gap-2 rounded-xl bg-stone-100 p-1" aria-label="Área de aprendizaje">
           <button type="button" onClick={() => handleVerticalChange('COCINA')} aria-pressed={verticalId === 'COCINA'} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${verticalId === 'COCINA' ? 'bg-amber-700 text-white shadow-sm' : 'text-stone-700 hover:bg-white'}`}>Cocina y pastelería</button>
           

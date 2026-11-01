@@ -1,79 +1,124 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getAdConfig, isAdsEnabled, isPlacementEnabled } from '../src/services/ads/adConfig';
-import { getAdProvider, NullAdProvider, AdsenseProvider, DirectSponsorProvider } from '../src/services/ads/AdProvider';
+import { getAdProvider, NullAdProvider, AdsenseProvider, DirectSponsorProvider, AdsterraProvider } from '../src/services/ads/AdProvider';
 import { AdPlacement } from '../src/services/ads/adTypes';
+import { AD_CONSENT_VERSION, AD_CONSENT_STORAGE_KEY, readAdConsent, writeAdConsent, clearAdConsent, canLoadAdScripts } from '../src/services/ads/adConsent';
 
-test('1. Default ad configuration is strictly disabled (enabled = false, provider = none)', () => {
+test('1. Default ad configuration is strictly disabled', () => {
   const config = getAdConfig();
   assert.equal(config.enabled, false);
   assert.equal(config.provider, 'none');
+  assert.equal(config.publisherId, undefined);
   assert.equal(isAdsEnabled(), false);
 });
 
-test('2. All ad placements return disabled status by default', () => {
+test('2. Every placement is disabled by default', () => {
   const placements: AdPlacement[] = [
-    'HOME_TOP',
-    'HOME_MIDDLE',
-    'SEARCH_MIDDLE',
-    'CATEGORY_TOP',
-    'CATEGORY_MIDDLE',
-    'VIDEO_BEFORE',
-    'VIDEO_AFTER',
-    'VIDEO_MIDDLE',
+    'HOME_TOP', 'HOME_MIDDLE', 'SEARCH_MIDDLE', 'CATEGORY_TOP',
+    'CATEGORY_MIDDLE', 'VIDEO_BEFORE', 'VIDEO_AFTER', 'VIDEO_MIDDLE',
   ];
-
-  for (const placement of placements) {
-    assert.equal(isPlacementEnabled(placement), false);
-  }
+  for (const placement of placements) assert.equal(isPlacementEnabled(placement), false);
 });
 
-test('3. NullAdProvider renders null and initiates zero network calls or scripts', async () => {
-  const nullProvider = getAdProvider('none');
-  assert.equal(nullProvider.name, 'none');
-
-  await nullProvider.init(getAdConfig());
-
-  const rendered = nullProvider.renderSlot(
-    { placement: 'HOME_TOP' },
-    getAdConfig()
-  );
-  assert.equal(rendered, null);
+test('3. Null provider has no rendering side effects', async () => {
+  const provider = getAdProvider('none');
+  assert.equal(provider.name, 'none');
+  await provider.init(getAdConfig());
+  assert.equal(provider.renderSlot({ placement: 'HOME_TOP' }, getAdConfig()), null);
 });
 
-test('4. Invalid or unconfigured AdSense setup forces disabled state', () => {
-  // Test fallback when provider is missing or publisher ID is empty
-  const mockUnconfiguredAdsense = {
-    enabled: true,
-    provider: 'adsense' as const,
-    publisherId: undefined,
-    placements: {
-      HOME_TOP: { enabled: true },
-    } as any,
+test('4. Unconfigured AdSense renders nothing', () => {
+  const config = {
+    enabled: true, provider: 'adsense' as const, publisherId: undefined,
+    placements: { HOME_TOP: { enabled: true } } as any,
   };
-
-  const adsenseProvider = new AdsenseProvider();
-  const rendered = adsenseProvider.renderSlot({ placement: 'HOME_TOP' }, mockUnconfiguredAdsense);
-
-  // Even if enabled = true in mock config, missing publisherId MUST render null
-  assert.equal(rendered, null);
+  assert.equal(new AdsenseProvider().renderSlot({ placement: 'HOME_TOP' }, config), null);
 });
 
-test('5. Future provider extension maintains decoupled architecture', () => {
-  const directProvider = getAdProvider('direct_sponsor');
-  assert.equal(directProvider.name, 'direct_sponsor');
-  assert.ok(directProvider instanceof DirectSponsorProvider);
-
-  const adsenseProvider = getAdProvider('adsense');
-  assert.equal(adsenseProvider.name, 'adsense');
-  assert.ok(adsenseProvider instanceof AdsenseProvider);
-
-  const fallbackProvider = getAdProvider('none');
-  assert.equal(fallbackProvider.name, 'none');
-  assert.ok(fallbackProvider instanceof NullAdProvider);
+test('5. Provider factory includes Adsterra without removing existing providers', () => {
+  assert.ok(getAdProvider('direct_sponsor') instanceof DirectSponsorProvider);
+  assert.ok(getAdProvider('adsense') instanceof AdsenseProvider);
+  assert.ok(getAdProvider('none') instanceof NullAdProvider);
+  assert.ok(getAdProvider('adsterra') instanceof AdsterraProvider);
 });
 
-test('6. Codebase contains no fake/hardcoded ca-pub AdSense credentials or fake publisher IDs', () => {
+test('6. Adsterra placements remain independently disabled by default', () => {
   const config = getAdConfig();
-  assert.equal(config.publisherId, undefined);
+  assert.equal(config.placements.HOME_TOP.enabled, false);
+  assert.equal(config.placements.HOME_MIDDLE.enabled, false);
+  assert.equal(config.placements.VIDEO_BEFORE.enabled, false);
+});
+
+test('7. Adsterra provider returns a React slot only for enabled home placements', () => {
+  const provider = new AdsterraProvider();
+  const config = {
+    enabled: true,
+    provider: 'adsterra' as const,
+    placements: {
+      HOME_TOP: { enabled: true, format: 'rectangle' as const },
+      HOME_MIDDLE: { enabled: false, format: 'native' as const },
+      SEARCH_MIDDLE: { enabled: false },
+      CATEGORY_TOP: { enabled: false },
+      CATEGORY_MIDDLE: { enabled: false },
+      VIDEO_BEFORE: { enabled: false },
+      VIDEO_AFTER: { enabled: false },
+      VIDEO_MIDDLE: { enabled: false },
+    },
+  };
+  const rendered = provider.renderSlot({ placement: 'HOME_TOP' }, config);
+  assert.ok(rendered);
+  assert.equal((rendered as { type?: { name?: string } }).type?.name, 'AdsterraSlot');
+  assert.equal(provider.renderSlot({ placement: 'HOME_MIDDLE' }, config), null);
+  assert.equal(provider.renderSlot({ placement: 'VIDEO_BEFORE' }, config), null);
+});
+
+
+test('8. Advertising consent defaults to unknown and fails closed for malformed or old records', () => {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, value); },
+  };
+  assert.equal(readAdConsent(storage), 'unknown');
+  store.set(AD_CONSENT_STORAGE_KEY, JSON.stringify({ version: 'old-version', choice: 'accepted' }));
+  assert.equal(readAdConsent(storage), 'unknown');
+  store.set(AD_CONSENT_STORAGE_KEY, '{invalid');
+  assert.equal(readAdConsent(storage), 'unknown');
+});
+
+test('9. Only an explicit current acceptance enables the advertising consent state', () => {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, value); },
+  };
+  const accepted = writeAdConsent('accepted', storage, () => new Date('2026-11-01T12:00:00.000Z'));
+  assert.equal(accepted?.version, AD_CONSENT_VERSION);
+  assert.equal(accepted?.choice, 'accepted');
+  assert.equal(accepted?.updatedAt, '2026-11-01T12:00:00.000Z');
+  assert.equal(readAdConsent(storage), 'accepted');
+  writeAdConsent('rejected', storage);
+  assert.equal(readAdConsent(storage), 'rejected');
+});
+
+
+test('10. Adsterra scripts require accepted consent; other providers are unaffected by this gate', () => {
+  assert.equal(canLoadAdScripts('adsterra', 'unknown'), false);
+  assert.equal(canLoadAdScripts('adsterra', 'rejected'), false);
+  assert.equal(canLoadAdScripts('adsterra', 'accepted'), true);
+  assert.equal(canLoadAdScripts('none', 'unknown'), true);
+});
+
+test('11. Clearing a stored preference returns the consent state to unknown', () => {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, value); },
+    removeItem: (key: string) => { store.delete(key); },
+  };
+  writeAdConsent('accepted', storage);
+  assert.equal(readAdConsent(storage), 'accepted');
+  clearAdConsent(storage);
+  assert.equal(readAdConsent(storage), 'unknown');
 });

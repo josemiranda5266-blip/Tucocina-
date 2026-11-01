@@ -5,7 +5,7 @@ interface ContactPageProps {
   onNavigate: (view: string, param?: string) => void;
 }
 
-const CONTACT_EMAIL = 'contacto@cociflash.com';
+const CONTACT_EMAIL = 'josemiranda5266@gmail.com';
 
 export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => (
   <section className="max-w-3xl mx-auto">
@@ -13,7 +13,7 @@ export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => (
       <div className="flex items-start gap-4">
         <div className="rounded-xl bg-amber-100 p-3 text-amber-800"><Mail className="w-6 h-6" /></div>
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-amber-700">AprendeViendo</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-amber-700">SaborClick</p>
           <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-stone-900">Contacto y reclamos</h1>
           <p className="mt-2 text-stone-600 leading-relaxed">Este canal sirve para consultas generales, privacidad, solicitudes de eliminación de datos y reclamos relacionados con contenido o derechos de propiedad intelectual.</p>
         </div>

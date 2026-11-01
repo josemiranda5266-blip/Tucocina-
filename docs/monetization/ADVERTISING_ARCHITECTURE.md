@@ -135,9 +135,10 @@ Para acuerdos comerciales directos con restaurantes, utensilios o marcas gastron
 
 - **Reglamentos Afectados**: GDPR (Europa), ePrivacy, CCPA (California).
 - **Requisito Antes de Activar Publicidad**:
-  - Implementar una Plataforma de Gestión de Consentimiento (CMP) certificada por IAB TCF v2.2.
-  - Asegurar que no se carguen scripts de seguimiento publicitario ni cookies personalizadas antes de que el usuario acepte el consentimiento.
-- **Estado Actual**: No se recopilan ni almacenan datos publicitarios.
+  - Verificar las obligaciones aplicables en cada país y las condiciones exigidas por la red publicitaria.
+  - No cargar scripts publicitarios antes de la elección afirmativa configurada para el proveedor.
+  - Esta interfaz propia no implementa el estándar IAB TCF 2.2 ni sustituye una CMP certificada cuando una red, jurisdicción o campaña exija ese estándar. En esos casos, no activar el inventario hasta integrar una CMP compatible.
+- **Estado Actual**: el consentimiento local para Adsterra está implementado en esta rama; no se ha validado aún en staging ni constituye por sí solo una certificación de cumplimiento.
 
 ---
 
@@ -168,6 +169,46 @@ El archivo `ads.txt` previene la venta no autorizada de inventario publicitario.
 - [ ] Dominio propio registrado y en producción con HTTPS.
 - [ ] Solicitud de Google AdSense aprobada para el dominio.
 - [ ] Publisher ID oficial (`ca-pub-XXXXXXXXXXXXX`) verificado.
-- [ ] CMP / Banner de consentimiento de cookies instalado si aplica a la región.
+- [x] Panel de preferencias publicitarias implementado: estado inicial desconocido, aceptación/rechazo explícitos, persistencia local versionada y acceso permanente desde el pie de página. La carga de Adsterra está bloqueada hasta aceptación vigente.
+- [ ] Validar el panel y la retirada de consentimiento en staging con ambos formatos habilitados.
 - [ ] Archivo `public/ads.txt` subido con las líneas oficiales proporcionadas por el proveedor.
 - [ ] Pruebas en ambiente Staging con `VITE_ADS_ENABLED=true` confirmando que los anuncios responden y no rompen el layout en dispositivos móviles.
+
+## Integración Adsterra (rama de prueba)
+
+Se incorporan dos unidades proporcionadas por el propietario desde su panel de Adsterra:
+- Native Banner: script /21/295a4cea70299fca7890e4ac7af65489, ubicado en HOME_MIDDLE.
+- Banner iframe 300 × 250: script /22/e1ab3355ac39411bfd3f2c4dee527a05, ubicado en HOME_TOP.
+
+Los anuncios permanecen desactivados por defecto. Ningún script se ejecuta salvo que se habiliten explícitamente la configuración global, el proveedor y el placement.
+
+Variables para una prueba controlada en el entorno de compilación:
+
+```env
+VITE_ADS_ENABLED=true
+VITE_ADS_PROVIDER=adsterra
+VITE_ADSTERRA_NATIVE_ENABLED=true
+VITE_ADSTERRA_300X250_ENABLED=true
+```
+
+Para probar un solo formato, activar su variable y dejar la otra en false. Para apagar toda la publicidad, usar VITE_ADS_ENABLED=false o VITE_ADS_PROVIDER=none.
+
+| Placement | Formato | Estado por defecto |
+|---|---|---|
+| HOME_TOP | Banner 300 × 250 | Desactivado |
+| HOME_MIDDLE | Native Banner | Desactivado |
+
+Ambos formatos se limitan a la página de inicio. No se insertan anuncios antes, durante ni después del reproductor.
+
+Los scripts se inyectan desde un efecto React después de montar el slot. Cada formato tiene un identificador de script para evitar inserciones repetidas. El bloque 300 × 250 define window.atOptions antes de cargar su script y Native Banner utiliza el ID de contenedor exacto proporcionado.
+
+Antes de activar en producción: ejecutar npm run verify, probar ambos formatos en staging, verificar el inventario desde el panel Adsterra y revisar CSP, privacidad y consentimiento aplicable. Esta integración no se ha desplegado.
+
+
+### Consentimiento publicitario (implementado en rama de prueba)
+
+El consentimiento publicitario es independiente de la aceptación de Términos y Privacidad. El estado inicial es `unknown` y bloquea Adsterra. La persona puede aceptar o rechazar; la elección queda guardada en el navegador con versión y fecha/hora. La preferencia puede modificarse desde «Preferencias de publicidad» en el pie de página. Una elección guardada con una versión anterior se considera inválida y vuelve a requerir decisión.
+
+Si el almacenamiento local está bloqueado o no disponible, la aplicación permanece en estado desconocido y no habilita los scripts. Al retirar el consentimiento, React desmonta los slots y elimina el contenido de sus contenedores. No se garantiza borrar cookies que el proveedor o sus socios ya hayan escrito; el panel y la política explican este límite.
+
+La interfaz no afirma que exista una modalidad no personalizada de Adsterra: el rechazo bloquea las dos unidades completas. El consentimiento solo se aplica a los scripts publicitarios integrados en SaborClick; no controla cookies o tratamientos de reproductores y servicios externos que la persona decida abrir.
