@@ -69,9 +69,11 @@ export const AdsterraSlot: React.FC<AdSlotProps> = ({ placement, className }) =>
 
   if (placement === 'HOME_TOP') {
     return (
-      <div ref={hostRef} className={className || 'my-5 flex justify-center'} aria-label="Publicidad">
-        <div className="min-h-[250px] min-w-[300px]" />
-      </div>
+      <div
+        ref={hostRef}
+        className={className || 'my-5 flex min-h-[250px] w-full items-center justify-center'}
+        aria-label="Publicidad"
+      />
     );
   }
 
