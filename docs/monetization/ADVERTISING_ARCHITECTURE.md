@@ -135,9 +135,10 @@ Para acuerdos comerciales directos con restaurantes, utensilios o marcas gastron
 
 - **Reglamentos Afectados**: GDPR (Europa), ePrivacy, CCPA (California).
 - **Requisito Antes de Activar Publicidad**:
-  - Implementar una Plataforma de Gestión de Consentimiento (CMP) certificada por IAB TCF v2.2.
-  - Asegurar que no se carguen scripts de seguimiento publicitario ni cookies personalizadas antes de que el usuario acepte el consentimiento.
-- **Estado Actual**: No se recopilan ni almacenan datos publicitarios.
+  - Verificar las obligaciones aplicables en cada país y las condiciones exigidas por la red publicitaria.
+  - No cargar scripts publicitarios antes de la elección afirmativa configurada para el proveedor.
+  - Esta interfaz propia no implementa el estándar IAB TCF 2.2 ni sustituye una CMP certificada cuando una red, jurisdicción o campaña exija ese estándar. En esos casos, no activar el inventario hasta integrar una CMP compatible.
+- **Estado Actual**: el consentimiento local para Adsterra está implementado en esta rama; no se ha validado aún en staging ni constituye por sí solo una certificación de cumplimiento.
 
 ---
 
