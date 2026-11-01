@@ -65,3 +65,8 @@ export function clearAdConsent(storage: StorageLike | undefined = getBrowserStor
     // Storage can be unavailable or restricted; the runtime remains fail-closed.
   }
 }
+
+/** Adsterra is the only provider currently backed by an external script. */
+export function canLoadAdScripts(provider: string, choice: AdConsentChoice): boolean {
+  return provider !== 'adsterra' || choice === 'accepted';
+}
