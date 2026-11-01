@@ -3,6 +3,7 @@ import test from 'node:test';
 import { getAdConfig, isAdsEnabled, isPlacementEnabled } from '../src/services/ads/adConfig';
 import { getAdProvider, NullAdProvider, AdsenseProvider, DirectSponsorProvider, AdsterraProvider } from '../src/services/ads/AdProvider';
 import { AdPlacement } from '../src/services/ads/adTypes';
+import { AD_CONSENT_VERSION, AD_CONSENT_STORAGE_KEY, readAdConsent, writeAdConsent } from '../src/services/ads/adConsent';
 
 test('1. Default ad configuration is strictly disabled', () => {
   const config = getAdConfig();
@@ -70,4 +71,33 @@ test('7. Adsterra provider returns a React slot only for enabled home placements
   assert.equal((rendered as { type?: { name?: string } }).type?.name, 'AdsterraSlot');
   assert.equal(provider.renderSlot({ placement: 'HOME_MIDDLE' }, config), null);
   assert.equal(provider.renderSlot({ placement: 'VIDEO_BEFORE' }, config), null);
+});
+
+
+test('8. Advertising consent defaults to unknown and fails closed for malformed or old records', () => {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, value); },
+  };
+  assert.equal(readAdConsent(storage), 'unknown');
+  store.set(AD_CONSENT_STORAGE_KEY, JSON.stringify({ version: 'old-version', choice: 'accepted' }));
+  assert.equal(readAdConsent(storage), 'unknown');
+  store.set(AD_CONSENT_STORAGE_KEY, '{invalid');
+  assert.equal(readAdConsent(storage), 'unknown');
+});
+
+test('9. Only an explicit current acceptance enables the advertising consent state', () => {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, value); },
+  };
+  const accepted = writeAdConsent('accepted', storage, () => new Date('2026-11-01T12:00:00.000Z'));
+  assert.equal(accepted?.version, AD_CONSENT_VERSION);
+  assert.equal(accepted?.choice, 'accepted');
+  assert.equal(accepted?.updatedAt, '2026-11-01T12:00:00.000Z');
+  assert.equal(readAdConsent(storage), 'accepted');
+  writeAdConsent('rejected', storage);
+  assert.equal(readAdConsent(storage), 'rejected');
 });
