@@ -37,15 +37,23 @@ export function getAdConfig(): AdConfig {
     HOME_MIDDLE: { enabled: nativeEnabled, format: 'native' },
   };
 
-  const isFullyConfigured =
-    envEnabled &&
-    validProvider === 'adsterra' &&
-    (nativeEnabled || rectangleEnabled);
+  const publisherId = read('VITE_ADSENSE_PUBLISHER_ID') || '';
+  const providerConfigured =
+    validProvider === 'adsense'
+      ? Boolean(publisherId.trim())
+      : validProvider === 'direct_sponsor'
+        ? true
+        : validProvider === 'adsterra'
+          ? nativeEnabled || rectangleEnabled
+          : false;
+
+  const isFullyConfigured = envEnabled && validProvider !== 'none' && providerConfigured;
 
   return {
     enabled: isFullyConfigured,
     provider: isFullyConfigured ? validProvider : 'none',
-    placements: isFullyConfigured ? placements : defaultPlacementsConfig,
+    publisherId: publisherId || undefined,
+    placements: isFullyConfigured && validProvider === 'adsterra' ? placements : defaultPlacementsConfig,
   };
 }
 
