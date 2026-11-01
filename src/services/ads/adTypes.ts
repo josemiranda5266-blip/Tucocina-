@@ -8,9 +8,9 @@ export type AdPlacement =
   | 'VIDEO_AFTER'
   | 'VIDEO_MIDDLE';
 
-export type AdProviderType = 'none' | 'adsense' | 'direct_sponsor';
+export type AdProviderType = 'none' | 'adsense' | 'direct_sponsor' | 'adsterra';
 
-export type AdFormat = 'banner' | 'responsive' | 'inline' | 'rectangle';
+export type AdFormat = 'banner' | 'responsive' | 'inline' | 'rectangle' | 'native';
 
 export interface AdPlacementConfig {
   enabled: boolean;
