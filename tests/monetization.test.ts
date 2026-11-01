@@ -3,7 +3,7 @@ import test from 'node:test';
 import { getAdConfig, isAdsEnabled, isPlacementEnabled } from '../src/services/ads/adConfig';
 import { getAdProvider, NullAdProvider, AdsenseProvider, DirectSponsorProvider, AdsterraProvider } from '../src/services/ads/AdProvider';
 import { AdPlacement } from '../src/services/ads/adTypes';
-import { AD_CONSENT_VERSION, AD_CONSENT_STORAGE_KEY, readAdConsent, writeAdConsent } from '../src/services/ads/adConsent';
+import { AD_CONSENT_VERSION, AD_CONSENT_STORAGE_KEY, readAdConsent, writeAdConsent, clearAdConsent, canLoadAdScripts } from '../src/services/ads/adConsent';
 
 test('1. Default ad configuration is strictly disabled', () => {
   const config = getAdConfig();
@@ -100,4 +100,25 @@ test('9. Only an explicit current acceptance enables the advertising consent sta
   assert.equal(readAdConsent(storage), 'accepted');
   writeAdConsent('rejected', storage);
   assert.equal(readAdConsent(storage), 'rejected');
+});
+
+
+test('10. Adsterra scripts require accepted consent; other providers are unaffected by this gate', () => {
+  assert.equal(canLoadAdScripts('adsterra', 'unknown'), false);
+  assert.equal(canLoadAdScripts('adsterra', 'rejected'), false);
+  assert.equal(canLoadAdScripts('adsterra', 'accepted'), true);
+  assert.equal(canLoadAdScripts('none', 'unknown'), true);
+});
+
+test('11. Clearing a stored preference returns the consent state to unknown', () => {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, value); },
+    removeItem: (key: string) => { store.delete(key); },
+  };
+  writeAdConsent('accepted', storage);
+  assert.equal(readAdConsent(storage), 'accepted');
+  clearAdConsent(storage);
+  assert.equal(readAdConsent(storage), 'unknown');
 });
