@@ -5,7 +5,7 @@ interface ContactPageProps {
   onNavigate: (view: string, param?: string) => void;
 }
 
-const CONTACT_EMAIL = 'contacto@cociflash.com';
+const CONTACT_EMAIL = 'josemiranda5266@gmail.com';
 
 export const ContactPage: React.FC<ContactPageProps> = ({ onNavigate }) => (
   <section className="max-w-3xl mx-auto">
