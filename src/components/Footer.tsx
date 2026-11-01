@@ -3,9 +3,10 @@ import { BookOpen, ExternalLink, ShieldCheck, FileText, Cookie, Copyright, Mail 
 
 interface FooterProps {
   onNavigate?: (view: string, param?: string) => void;
+  onManageAdConsent?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+export const Footer: React.FC<FooterProps> = ({ onNavigate, onManageAdConsent }) => {
   const legalLink = (section: string) => { if (onNavigate) onNavigate('legal', section); };
 
   return (
@@ -26,6 +27,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <li><button type="button" onClick={() => legalLink('privacy')} className="inline-flex items-center gap-2 hover:text-white transition-colors"><ShieldCheck className="w-3.5 h-3.5" /> Política de Privacidad</button></li>
             <li><button type="button" onClick={() => legalLink('terms')} className="inline-flex items-center gap-2 hover:text-white transition-colors"><FileText className="w-3.5 h-3.5" /> Términos de Uso</button></li>
             <li><button type="button" onClick={() => legalLink('cookies')} className="inline-flex items-center gap-2 hover:text-white transition-colors"><Cookie className="w-3.5 h-3.5" /> Cookies y Analítica</button></li>
+            <li><button type="button" onClick={onManageAdConsent} className="inline-flex items-center gap-2 hover:text-white transition-colors"><Cookie className="w-3.5 h-3.5" /> Preferencias de publicidad</button></li>
             <li><button type="button" onClick={() => legalLink('content')} className="inline-flex items-center gap-2 hover:text-white transition-colors"><Copyright className="w-3.5 h-3.5" /> Contenido y Propiedad Intelectual</button></li>
           </ul>
         </div>
